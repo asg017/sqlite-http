@@ -26,9 +26,7 @@ func formatSqliteDatetime(t *time.Time) *string {
 }
 
 var SharedDoTableColumns = []vtab.Column{
-	{Name: "timings", Type: sqlite.SQLITE_TEXT.String()},
-	{Name: "remote_address", Type: sqlite.SQLITE_TEXT.String()},
-
+	
 	{Name: "request_url", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "request_method", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "request_headers", Type: sqlite.SQLITE_TEXT.String()},
@@ -40,6 +38,9 @@ var SharedDoTableColumns = []vtab.Column{
 	{Name: "response_headers", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "response_cookies", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "response_body", Type: sqlite.SQLITE_BLOB.String()},
+	{Name: "remote_address", Type: sqlite.SQLITE_TEXT.String()},
+	{Name: "timings", Type: sqlite.SQLITE_TEXT.String()},
+	{Name: "meta", Type: sqlite.SQLITE_TEXT.String()},
 }
 
 var GetTableColumns = append([]vtab.Column{
@@ -89,9 +90,17 @@ type Timings struct {
 	TLSHandshakeStart *time.Time 
 	TLSHandshakeDone *time.Time 
 	WroteHeaders *time.Time 
+	BodyStart * time.Time
+	BodyEnd * time.Time
 }
 func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 	col := cur.columns[c]
+
+  // TODO this should be a compile-time (?) option. response is nil bc commented out error handling in client.Do in GET
+  if(strings.HasPrefix(col.Name, "response_") && cur.response == nil) {
+    ctx.ResultNull()
+    return nil
+  }
 	switch col.Name {
 	case "url":
 		ctx.ResultText("")
@@ -100,11 +109,6 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 	case "cookies":
 		ctx.ResultText("")
 
-	case "timings":
-		buf, _ := json.Marshal(cur.timing)
-		ctx.ResultText(string(buf))
-	case "remote_address":
-		ctx.ResultText(cur.meta.RemoteAddr)
 	case "request_url":
 		ctx.ResultText(cur.request.URL.String())
 	case "request_method":
@@ -147,8 +151,20 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 			ctx.ResultText(string(buf))
 		}
 	case "response_body":
+		start := time.Now()
+		cur.timing.BodyStart =  &start
+		
 		body, _ := io.ReadAll(cur.response.Body)
+		
+		end := time.Now()
+		cur.timing.BodyEnd =  &end
+
 		ctx.ResultBlob(body)
+	case "timings":
+		buf, _ := json.Marshal(cur.timing)
+		ctx.ResultText(string(buf))
+	case "remote_address":
+		ctx.ResultText(cur.meta.RemoteAddr)
 	default:
 		fmt.Println("what the fuck")
 	}
@@ -234,7 +250,9 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 	cursor := HttpDoCursor{
 		columns: GetTableColumns,
 	}
-	client := &http.Client{}
+	client := &http.Client{
+    Timeout: 5 * time.Second,
+  }
 
 	request, err := createRequest("GET", url, headers, nil, cookies)
 	if err != nil {
@@ -250,8 +268,9 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 
 	response, err := client.Do(request)
 	if err != nil {
+		fmt.Println("client.Do error")
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		//return nil, sqlite.SQLITE_ABORT
 	}
 
 	cursor.current = -1
@@ -425,17 +444,20 @@ func readHeader(rawHeader string) (textproto.MIMEHeader, error) {
 	return header, nil
 }
 type TimingJSON struct {
-	Started * string `json:"started"`
+	Started * string `json:"start"`
 	FirstResponseByte * string `json:"first_byte"`
-	DNSStart * string `json:"dns_start"`
-	DNSDone * string `json:"dns_done"`
-	GotConn * string `json:"got_conn"`
-	ConnectStart * string `json:"connect_start"`
-	ConnectDone * string `json:"connect_done"`
-	TLSHandshakeStart * string `json:"tls_handshake_start"`
-	TLSHandshakeDone * string `json:"tls_handshake_done"`
+	GotConn * string `json:"connection"`
 	WroteHeaders * string `json:"wrote_headers"`
+	DNSStart * string `json:"dns_start"`
+	DNSDone * string `json:"dns_end"`
+	ConnectStart * string `json:"connect_start"`
+	ConnectDone * string `json:"connect_end"`
+	TLSHandshakeStart * string `json:"tls_handshake_start"`
+	TLSHandshakeDone * string `json:"tls_handshake_end"`
+	BodyStart * string `json:"body_start"`
+	BodyEnd * string `json:"body_end"`
 }
+
 func (t Timings) MarshalJSON() ([]byte, error) {
 	tj := TimingJSON{} 
 	if t.Started != nil {
@@ -468,6 +490,12 @@ func (t Timings) MarshalJSON() ([]byte, error) {
 	}
 	if t.WroteHeaders != nil {
 		tj.WroteHeaders = formatSqliteDatetime(t.WroteHeaders)
+	}
+	if t.BodyStart != nil {
+		tj.BodyStart = formatSqliteDatetime(t.BodyStart)
+	}
+	if t.BodyEnd != nil {
+		tj.BodyEnd = formatSqliteDatetime(t.BodyEnd)
 	}
 	
 	return json.Marshal(tj)
