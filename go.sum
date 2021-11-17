@@ -1,3 +1,5 @@
+github.com/asg017/sqlite v0.0.0-20211113023900-40ac9580ba56 h1:07cTMPI+o+k3+Yn8+aFhgvbEnHJJTbWTsNUjz+jb4Ig=
+github.com/asg017/sqlite v0.0.0-20211113023900-40ac9580ba56/go.mod h1:UVocl0mLwS0QKUKa5mI6lppmBjvQnUEkFjFfoWqFWQU=
 github.com/augmentable-dev/vtab v0.0.0-20210818144031-5c7659b723dd h1:uX6G/fS/0v7P6SYqkQPe56lKD2XaniSZJIHMv/ZeT04=
 github.com/augmentable-dev/vtab v0.0.0-20210818144031-5c7659b723dd/go.mod h1:nW8zI//bDNKyXrKJgzdezNl3XzWYsBHm3JBaxB/ZTSU=
 github.com/mattn/go-pointer v0.0.1 h1:n+XhsuGeVO6MEAp7xyEukFINEa+Quek5psIR/ylA6o0=

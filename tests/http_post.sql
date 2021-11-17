@@ -1,4 +1,4 @@
-.load dist/http.so
+.load dist/http0.so
 
 .mode csv
 .headers on
@@ -25,7 +25,7 @@ create TEMPORARY view post_json as select *
 insert into testcases(category, description, result)
   select 'json',
     'sent json body',
-    cast(request_body as text) --== '{"name":"Alex"}'
+    cast(request_body as text) == '{"name":"Alex"}'
   from post_json
   union all
   select 'json',

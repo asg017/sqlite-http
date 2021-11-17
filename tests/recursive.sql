@@ -1,4 +1,4 @@
-.load dist/http.so
+.load dist/http0.so
 .bail on
 .mode csv
 .headers on

@@ -1,4 +1,4 @@
-.load dist/http.so
+.load dist/http0.so
 
 .mode csv
 .headers on

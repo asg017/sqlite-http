@@ -9,6 +9,5 @@ require (
 
 require github.com/mattn/go-pointer v0.0.1 // indirect
 
-replace go.riyazali.net/sqlite => ./deps/sqlite
+replace go.riyazali.net/sqlite => github.com/asg017/sqlite v0.0.0-20211113023900-40ac9580ba56
 
-//replace github.com/augmentable-dev/vtab => ./deps/vtab
