@@ -71,7 +71,7 @@ var functions = map[string]sqlite.Function{
 	"http_get_headers":           &HttpGetHeadersFunc{},
 	"http_post_headers":          &HttpPostHeadersFunc{},
 	"http_do_headers":            &HttpDoHeadersFunc{},
-	"http_post_form_url_encoded": &HttpPostFormUrlEncoded{},
+	"http_post_form_urlencoded": &HttpPostFormUrlEncoded{},
 	"http_rate_limit":            &HttpRateLimit{},
 	"http_timeout_set":           &HttpTimeoutSet{},
 }

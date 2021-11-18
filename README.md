@@ -2,117 +2,37 @@
 
 A SQLite extension for making HTTP requests purely in SQL.
 
+- Create GET, POST, or any other HTTP requests and download responses, like `curl`, `wget`, and `fetch`
+- Query HTTP headers, cookies, timing information
+- Set rate limits, timeouts
+
 ## 🚧🚧 Work In Progress! 🚧🚧
 
-This library is extremely experimental and subject to change. I plan to make a stable beta release and subsequent v0+v1 in the near future, so use with caution.
+This library is experimental and subject to change. I plan to make a stable beta release and subsequent v0+v1 in the near future, so use with caution.
 
 When v0 is ready (with a mostly stable API), I will make a release (so watch this repo for that) and will make a blog post, feel free to [follow me on twitter](https://twitter.com/agarcia_me) to get notified of that.
 
-## Overview
+## Installing
 
-Scalar functions:
+TODO
 
-- Request the body contents from a URL
-  - [http_get_body](#)(_url, headers, cookies_)
-    cookies\_)
-  - [http_post_body](#)(_url, headers, body, cookies_)
-  - [http_do_body](#)(_method, url, headers, body, cookies_)
-- Request the header contents from a URL
-- [http_get_headers](#)(_url, headers, - [http_post_headers](#)(\_url, headers, body, cookies_)
-- [http_do_headers](#)(_method, url, headers, body, cookies_)
-- [http_headers](#)(_label1, value1_)
-- Create, query, and manipulate HTTP headers in wire format
-  - [http_headers_has](#)(_headers, key_)
-  - [http_headers_get](#)(_headers, get_)
-  - [http_headers_all](#)(_headers, key_)
-- Create, query, and manipulate HTTP queries
-  - [http_cookies](#)(_label1, value1_)
+## Documentation
 
-Table-valued functions:
+See [`api.md`](./api.md) for a full API Reference.
 
-- [http_get](#)(_url, headers, cookies_)
-- [http_post](#)(_url, headers, body, cookies_)
-- [http_do](#)(_method, url, headers, body, cookies_)
+## Examples
 
-- [http_rate_limit](#)(_duration_)
-- [http_timeout](#)(_duration_)
+First, let's load the extension using the [`.load`](https://www.sqlite.org/cli.html#loading_extensions) command in SQLite's CLI.
 
-```SQL
-
--- Also http_get and http_get
-CREATE TABLE http_do(
-
-);
+```sql
+.load http0.so
 ```
 
-## Interface Overview
+> Note: Loading extensions may be disabled by default in your computer's builtin `sqlite3` CLI. Consider downloading a [newer version of SQLite](https://sqlite.org/download.html). Also look into your favorite SQLite client library API for how to load extensions, like Python's [`load_extension`](https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.load_extension), Node.js's [`loadExtesion`](https://github.com/JoshuaWise/better-sqlite3/blob/master/docs/api.md#loadextensionpath-entrypoint---this) in `better-sqlite`, or the [`load_extension`](https://www.sqlite.org/lang_corefunc.html#load_extension) function in some SQLite libraries.
 
-- making requests
-- HEADERS arguments
-- COOKIES arguments
+## See also
 
-## Function Details
-
-### The `http_get_body()` and `http_get_headers()` functions
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-### The `http_post_body()` and `http_post_headers()` functions
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-### The `http_do_body()` and `http_do_headers()` functions
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-### The `http_headers()` functions
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-#### The `http_headers_has()` function
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-#### The `http_headers_get()` function
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-#### The `http_headers_all()` function
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
-
-### The `http_cookies()` function
-
-X
-
-Examples:
-
-- `http_()` ➡ `''`
+- [sqlite-html](https://github.com/asg017/sqlite-html), for parsing and querying HTML using CSS selectors in SQLite (pairs great with this tool)
+- [pgsql-http](https://github.com/pramsey/pgsql-http), a similar yet very different HTTP libraryt for POstgreSQL (didn't know about this before I started this, but interestingly enough came up with a very similar API)
+- [riyaz-ali/sqlite](https://github.com/riyaz-ali/sqlite), the brilliant Go library that this library depends on
+- [nalgeon/sqlean](https://github.com/nalgeon/sqlean), several pre-compiled handy SQLite functions, in C

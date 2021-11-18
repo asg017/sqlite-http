@@ -160,7 +160,7 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 	if err != nil {
 		fmt.Println("Error making request", params.url)
 		fmt.Println(err)
-		return nil, nil, sqlite.SQLITE_ABORT
+		return nil, nil, sqlite.SQLITE_ERROR
 	}
 
 	if params.headers != "" {
@@ -168,7 +168,7 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 
 		if err != nil {
 			fmt.Println("invalid headers")
-			return nil, nil, sqlite.SQLITE_ABORT
+			return nil, nil, sqlite.SQLITE_ERROR
 		}
 		// step 1: clear default headers
 		for key := range request.Header {
@@ -188,7 +188,7 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 		err := json.Unmarshal([]byte(params.cookies), &parsed)
 		if err != nil {
 			fmt.Println("invalid cookies")
-			return nil, nil, sqlite.SQLITE_ABORT
+			return nil, nil, sqlite.SQLITE_ERROR
 		}
 
 		for name, value := range parsed {
@@ -335,7 +335,7 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "GET", url: url, headers: headers, body: nil, cookies: cookies})
 	if err != nil {
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	request = traceAndInclude(request, &cursor)
@@ -347,7 +347,7 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 	if err != nil {
 		fmt.Println("client.Do error")
 		fmt.Println(err)
-		//return nil, sqlite.SQLITE_ABORT
+		//return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1
@@ -385,7 +385,7 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	request = traceAndInclude(request, &cursor)
@@ -396,7 +396,7 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	response, err := client.Do(request)
 	if err != nil {
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1
@@ -437,7 +437,7 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	request = traceAndInclude(request, &cursor)
@@ -448,7 +448,7 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 	response, err := client.Do(request)
 	if err != nil {
 		fmt.Println(err)
-		return nil, sqlite.SQLITE_ABORT
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1

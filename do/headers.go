@@ -106,8 +106,8 @@ func (*HttpDoHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 		return
 	}
 
-	url := values[0].Text()
-	method := values[1].Text()
+	method := values[0].Text()
+	url := values[1].Text()
 	var headers string
 	var cookies string
 	var body []byte
