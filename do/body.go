@@ -3,7 +3,6 @@ package http_do
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 
 	"go.riyazali.net/sqlite"
@@ -50,7 +49,7 @@ func (*HttpDoBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	if err != nil {
 		c.ResultError(err)
 	} else {
-		body, _ := io.ReadAll(response.Body)
+		body, _ := ioutil.ReadAll(response.Body)
 		c.ResultBlob(body)
 	}
 }
@@ -94,7 +93,7 @@ func (*HttpPostBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	if err != nil {
 		c.ResultError(err)
 	} else {
-		body, _ := io.ReadAll(response.Body)
+		body, _ := ioutil.ReadAll(response.Body)
 		c.ResultBlob(body)
 	}
 }
