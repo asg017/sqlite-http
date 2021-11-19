@@ -345,9 +345,7 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Println("client.Do error")
-		fmt.Println(err)
-		//return nil, sqlite.SQLITE_ERROR
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1
