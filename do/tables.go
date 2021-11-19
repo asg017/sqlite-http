@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
 	"net/textproto"
@@ -257,7 +258,7 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 			ctx.ResultText(string(buf))
 		}
 	case "request_body":
-		body, _ := io.ReadAll(cur.request.Body)
+		body, _ := ioutil.ReadAll(cur.request.Body)
 		ctx.ResultBlob(body)
 	case "response_status":
 		ctx.ResultText(cur.response.Status)
@@ -282,7 +283,7 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 		start := time.Now()
 		cur.timing.BodyStart = &start
 
-		body, _ := io.ReadAll(cur.response.Body)
+		body, _ := ioutil.ReadAll(cur.response.Body)
 
 		end := time.Now()
 		cur.timing.BodyEnd = &end
