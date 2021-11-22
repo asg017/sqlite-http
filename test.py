@@ -1,7 +1,22 @@
 import sqlite3
 import unittest
 import json
+import os
 from datetime import datetime, timedelta
+
+
+should_skip_do = os.environ.get("SKIP_DO") == "1"
+
+if should_skip_do:
+  print("WARNING: Skipping all tests that depend on a local httpbin running. should only be used for CI tests only.")
+
+def skip_do(f):
+  def wrapper(self):
+    if should_skip_do:
+      self.skipTest("Skipping all do methods")
+    f(self)
+  return wrapper
+
 
 def connect(entry:str) -> sqlite3.Cursor:
   db = sqlite3.connect(":memory:")
@@ -93,6 +108,7 @@ class TestHttp(unittest.TestCase):
     """).fetchone()
     self.assertEqual(d, "{\"name\":\"Alex\"}")
   
+  @skip_do
   def test_http_do_body(self):
     d, = db.execute("""
       select http_do_body(
@@ -103,6 +119,7 @@ class TestHttp(unittest.TestCase):
     data = json.loads(d.decode('utf8'))
     self.assertEqual(data.get("url"), "http://localhost:8080/delete")
   
+  @skip_do
   def test_http_do_headers(self):
     headers, = db.execute("""
       select http_do_headers(
@@ -113,6 +130,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(len(headers.splitlines()), 7)
   
   # TODO finish this test, then add http_post and http_do
+  @skip_do
   def test_http_get(self):
     d = db.execute("""
       select * from http_get(
@@ -135,9 +153,10 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(len(d["response_headers"].splitlines()), 7)
     self.assertEqual(d["response_cookies"], "[]")
     self.assertTrue(len(d["response_body"]) > 100)
-    self.assertEqual(d["remote_address"], "[::1]:8080")
+    self.assertEqual(d["remote_address"], "127.0.0.1:8080")
     self.assertEqual(d["meta"], None)
   
+  @skip_do
   def test_http_get_body(self):
     d, = db.execute("""
       select http_get_body(
@@ -147,6 +166,7 @@ class TestHttp(unittest.TestCase):
     data = json.loads(d.decode("utf8"))
     self.assertEqual(data.get("args").get("name"), "alex")
   
+  @skip_do
   def test_http_get_headers(self):
     headers, = db.execute("""
       select http_get_headers(
@@ -181,6 +201,8 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(rows[2]["key"], "User-Agent")
     self.assertEqual(rows[2]["value"], "4")
     
+  # TODO manually check skip_do for http_get to tests headers func seperately
+  @skip_do
   def test_http_headers_get(self):
     a,b,c, d = db.execute("""
       select http_headers_get(
@@ -220,6 +242,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(a, 1)
     self.assertEqual(b, 0)
   
+  @skip_do
   def test_http_post_body(self):
     d, = db.execute("""
       select http_post_body(
@@ -231,6 +254,8 @@ class TestHttp(unittest.TestCase):
     data = json.loads(d.decode("utf8"))
     self.assertEqual(data.get("json").get("name"), "Alex")
   
+  # TODO test without needing to post_body
+  @skip_do
   def test_http_post_form_urlencoded(self):
     d, = db.execute("""
       select http_post_body(
@@ -246,6 +271,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(data.get("form").get("name"), "Alex")
     self.assertEqual(data.get("form").get("age"), "99")
   
+  @skip_do
   def test_http_post_headers(self):
     headers, = db.execute("""
       select http_post_headers("http://localhost:8080/post")
@@ -266,6 +292,7 @@ class TestHttp(unittest.TestCase):
     """, (n,)).fetchall()
     
   
+  @skip_do
   def test_http_rate_limit(self):
     # turn off rate limit
     db.execute("select http_rate_limit(1);")
@@ -300,7 +327,7 @@ class TestHttp(unittest.TestCase):
         self.assertGreaterEqual((curr_start - prev_start), timedelta(milliseconds=20-3))
         self.assertLessEqual((curr_start - prev_start), timedelta(milliseconds=20+5))
         
-  
+  @skip_do
   def test_http_timeout_set(self):
     d, = db.execute("select http_timeout_set(100)").fetchone()
     self.assertEqual(d, 100)

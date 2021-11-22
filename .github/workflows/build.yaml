@@ -8,7 +8,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
       - run: make all
-      - run: pip install httpbin gunicorn
-      - run: |
-          gunicorn --bind 127.0.0.1:8080 httpbin:app & 
-          make test
+      - run: make test
+        env:
+          SKIP_DO: "1"

@@ -30,6 +30,14 @@ First, let's load the extension using the [`.load`](https://www.sqlite.org/cli.h
 
 > Note: Loading extensions may be disabled by default in your computer's builtin `sqlite3` CLI. Consider downloading a [newer version of SQLite](https://sqlite.org/download.html). Also look into your favorite SQLite client library API for how to load extensions, like Python's [`load_extension`](https://docs.python.org/3/library/sqlite3.html#sqlite3.Connection.load_extension), Node.js's [`loadExtesion`](https://github.com/JoshuaWise/better-sqlite3/blob/master/docs/api.md#loadextensionpath-entrypoint---this) in `better-sqlite`, or the [`load_extension`](https://www.sqlite.org/lang_corefunc.html#load_extension) function in some SQLite libraries.
 
+## Testing
+
+Testing the output `.so` is in `test.py`. Tests require a local instance of [httpbin](https://httpbin.org/) to work. If you have docker, run `docker httpbin` to start an instance on port 8080. If you want to skip tests that require httpbin (ex CI scripts), then set a `SKIP_DO` environment varaible to `""`, like sp:
+
+```
+SKIP_DO=1; python3 test.py
+```
+
 ## See also
 
 - [sqlite-html](https://github.com/asg017/sqlite-html), for parsing and querying HTML using CSS selectors in SQLite (pairs great with this tool)
