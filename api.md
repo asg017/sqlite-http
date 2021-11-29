@@ -49,7 +49,7 @@ A single HTTP request is made with all of the following functions:
 - `http_post_headers`
 - `http_do_headers`
 
-Refer to each function's documentation below for more specifics. A version of this extension, temporarily called `http0-no-do.so`, removes these functions, in case you want to distribute the utility functions found in this project (`http_headers_get`, `http_headers_each`, etc.) to a broader audience, but don't want to become a vector for DDoS attacks.
+Refer to each function's documentation below for more specifics. A version of this extension called `http0-no-net.so` removes these functions, in case you want to distribute the utility functions found in this project (`http_headers_get`, `http_headers_each`, etc.) to a broader audience, but don't want to become a vector for DDoS attacks. This is especially helpful when using [Datasette](https://datasette.io/).
 
 By default, no rate-limiting is set in this library. So if you run:
 
@@ -101,7 +101,7 @@ All request methods also support a cookies argument, to send cookies alongside a
 
 ### Request Everything
 
-The `http_get`, `http_post`, and `http_do` table functions will make HTTP requests and creates a single-row table of information on the generated request, response, and metadata. These functions are [table-valued functions](https://www.sqlite.org/vtab.html#tabfunc2), not scalar/window functions, so they work differently than other functions in this library.
+The `http_get`, `http_post`, and `http_do` table functions will make HTTP requests and create a single-row table of information on the generated request, response, and metadata. These functions are [table-valued functions](https://www.sqlite.org/vtab.html#tabfunc2), not scalar/window functions, so they work differently than other functions in this library.
 
 Every call to one of these table functions returns a single row. Each of these functions generate a table with this schema:
 

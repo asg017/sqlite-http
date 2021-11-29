@@ -4,15 +4,17 @@ import json
 import os
 from datetime import datetime, timedelta
 
+EXT_PATH = "dist/http0-{OS}".format(OS=os.environ.get("OS"))
+EXT_PATHNO_NET = "dist/http0-{OS}-no-net".format(OS=os.environ.get("OS"))
 
-should_skip_do = os.environ.get("SKIP_DO") == "1"
+should_skip_net = os.environ.get("SKIP_NET") == "1"
 
-if should_skip_do:
+if should_skip_net:
   print("WARNING: Skipping all tests that depend on a local httpbin running. should only be used for CI tests only.")
 
 def skip_do(f):
   def wrapper(self):
-    if should_skip_do:
+    if should_skip_net:
       self.skipTest("Skipping all do methods")
     f(self)
   return wrapper
@@ -33,8 +35,8 @@ def connect(entry:str) -> sqlite3.Cursor:
   db.row_factory = sqlite3.Row
   return db
 
-db = connect("dist/http0.so")
-db_nodo = connect("dist/http0-no-do.so")
+db = connect(EXT_PATH)
+db_nonet = connect(EXT_PATHNO_NET)
 
 # Fun fact: the SQLite datetime() format, with fractional seconds,
 # doesn't always have 3 digits of precision.
@@ -76,7 +78,7 @@ class TestHttp(unittest.TestCase):
     ])
   
   def test_nodofuncs(self):
-    funcs = list(map(lambda a: a[0], db_nodo.execute("select name from fafter where name not in (select name from fbefore) order by name").fetchall()))
+    funcs = list(map(lambda a: a[0], db_nonet.execute("select name from fafter where name not in (select name from fbefore) order by name").fetchall()))
     self.assertEqual(funcs, [
       "http_cookies",
       "http_debug",
@@ -153,7 +155,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(len(d["response_headers"].splitlines()), 7)
     self.assertEqual(d["response_cookies"], "[]")
     self.assertTrue(len(d["response_body"]) > 100)
-    self.assertEqual(d["remote_address"], "127.0.0.1:8080")
+    self.assertTrue(d["remote_address"] in ("127.0.0.1:8080", "[::1]:8080"))
     self.assertEqual(d["meta"], None)
   
   @skip_do

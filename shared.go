@@ -15,11 +15,11 @@ var (
 	Version string
 	// TODO should be in seperate script - this works, but the generated binary 
 	// should have no reference to do functions at all, should be slimmed-down binary
-	OmitDo  string
+	OmitNet  string
 )
 
 func init() {
-	omitDo := OmitDo == "1"
+	OmitNet := OmitNet == "1"
 	sqlite.Register(func(api *sqlite.ExtensionApi) (sqlite.ErrorCode, error) {
 
 		if err := meta.Register(api, meta.RegisterParams{
@@ -30,7 +30,7 @@ func init() {
 			return sqlite.SQLITE_ERROR, err
 		}
 
-		if !omitDo {
+		if !OmitNet {
 			if err := do.Register(api); err != nil {
 				return sqlite.SQLITE_ERROR, err
 			}
