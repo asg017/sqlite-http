@@ -14,11 +14,23 @@ When v0 is ready (with a mostly stable API), I will make a release (so watch thi
 
 ## Installing
 
-TODO
+`sqlite-http` is distributed as a [runtime-loadable](https://www.sqlite.org/loadext.html) SQLite extension. Depending on your operating system, you'll need to either download the compiled `.dylib`, `.so`, or `.dll` file and load it
+into your SQLite environment.
+
+TODO document release download
+
+For example, if you plan on using it on the command line using `sqlite3`:
+
+```bash
+sqlite> .load ./http0
+sqlite> select http_get("...");
+```
+
+Note: by default, the `sqlite3` CLI pre-installed on MacOS systems don't allow for loading extensions, so try downloading another version (ex. from [brew](https://formulae.brew.sh/formula/sqlite)) to use `sqlite-http` properly on Mac.
 
 ## Documentation
 
-See [`api.md`](./api.md) for a full API Reference.
+See [`api.md`](./api.md) for a full API reference.
 
 ## Examples
 
