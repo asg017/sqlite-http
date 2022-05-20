@@ -1,6 +1,8 @@
 # API Reference
 
-As a reminder, `sqlite-http` is still young, so breaking changes should be expected.
+A full reference to every function and module that `sqlite-http` offers.
+
+As a reminder, `sqlite-http` follows [semver](https://semver.org/) and is pre v1, so breaking changes are to be expected.
 
 ## Overview
 
@@ -218,9 +220,15 @@ More header utilities may be added in the future. Follow [#23](https://github.co
 
 #### `http_headers_has`
 
+`http_headers_has(headers, name)`
+
 #### `http_headers_get`
 
+`http_headers_get(headers, name)`
+
 #### `http_headers_all`
+
+`http_headers_has(???)`
 
 #### `http_headers_each`
 

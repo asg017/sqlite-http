@@ -2,3 +2,4 @@ dist/
 deps/
 *.db
 benchmarks
+examples/

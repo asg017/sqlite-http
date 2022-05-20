@@ -4,8 +4,8 @@ import json
 import os
 from datetime import datetime, timedelta
 
-EXT_PATH = "dist/http0-{OS}".format(OS=os.environ.get("OS"))
-EXT_PATHNO_NET = "dist/http0-{OS}-no-net".format(OS=os.environ.get("OS"))
+EXT_PATH = "dist/http0"
+EXT_PATHNO_NET = "dist/http0-no-net"
 
 should_skip_net = os.environ.get("SKIP_NET") == "1"
 
@@ -337,8 +337,8 @@ class TestHttp(unittest.TestCase):
     p1, = db.execute("select response_status from http_get('http://localhost:8080/delay/.05')").fetchone()
     self.assertEqual(p1, "200 OK")
     
-    with self.assertRaises(sqlite3.Error):
-      db.execute("select response_status from http_get('http://localhost:8080/delay/.2')").fetchone()
+    with self.assertRaises(sqlite3.OperationalError):
+      db.execute("select response_status from http_get('http://localhost:8080/delay/2')").fetchone()
     
     d, = db.execute("select http_timeout_set(500)").fetchone()
     p3, = db.execute("select response_status from http_get('http://localhost:8080/delay/.2')").fetchone()

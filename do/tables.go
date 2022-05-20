@@ -296,8 +296,6 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 		ctx.ResultText(string(buf))
 	case "meta":
 		ctx.ResultNull()
-	default:
-		fmt.Println("what the fuck")
 	}
 	return nil
 }
@@ -346,7 +344,8 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 
 	response, err := client.Do(request)
 	if err != nil {
-		return nil, sqlite.SQLITE_ERROR
+		fmt.Println(err)
+		//return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1
@@ -383,7 +382,7 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error preparing request", err)
 		return nil, sqlite.SQLITE_ERROR
 	}
 
@@ -393,8 +392,11 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	cursor.timing.Started = &started
 
 	response, err := client.Do(request)
+
+	// TODO make this configurable. I don't want it to always error
+	// if there's some connection error, but maybe other want that
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("error on client.Do", err)
 		return nil, sqlite.SQLITE_ERROR
 	}
 
