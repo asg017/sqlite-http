@@ -70,11 +70,11 @@ $(TARGET_SQLITE3): $(TARGET_OBJ) dist/sqlite3-extra.c sqlite/shell.c
 	-DSQLITE_EXTRA_INIT=core_init -DSQLITE3_INIT_FN=sqlite3_http_init \
 	-o $@
 
-$(TARGET_PACKAGE): $(TARGET_LOADABLE) $(TARGET_OBJ) http.h $(TARGET_SQLITE3)
-	zip --junk-paths $@ $(TARGET_LOADABLE) $(TARGET_OBJ) http.h $(TARGET_SQLITE3)
+$(TARGET_PACKAGE): $(TARGET_LOADABLE) $(TARGET_OBJ) sqlite/sqlite-http.h $(TARGET_SQLITE3)
+	zip --junk-paths $@ $(TARGET_LOADABLE) $(TARGET_OBJ) sqlite/sqlite-http.h $(TARGET_SQLITE3)
 
-dist/sqlite3-extra.c: sqlite/sqlite3.c core_init.c
-	cat sqlite/sqlite3.c core_init.c > $@
+dist/sqlite3-extra.c: sqlite/sqlite3.c sqlite/core_init.c
+	cat sqlite/sqlite3.c sqlite/core_init.c > $@
 
 format:
 	gofmt -s -w .

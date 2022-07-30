@@ -3,3 +3,4 @@ deps/
 *.db
 benchmarks
 examples/
+.vscode

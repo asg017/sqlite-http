@@ -81,8 +81,7 @@ type Timings struct {
 
 func readHeader(rawHeader string) (textproto.MIMEHeader, error) {
 	headerReader := textproto.NewReader(bufio.NewReader(strings.NewReader(rawHeader)))
-	header, _ := headerReader.ReadMIMEHeader()
-	return header, nil
+	return headerReader.ReadMIMEHeader()
 }
 
 type TimingJSON struct {
@@ -258,7 +257,11 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 			ctx.ResultText(string(buf))
 		}
 	case "request_body":
-		body, _ := ioutil.ReadAll(cur.request.Body)
+		body, err := ioutil.ReadAll(cur.request.Body)
+		if err != nil {
+			ctx.ResultError(err)
+		} 
+	
 		ctx.ResultBlob(body)
 	case "response_status":
 		ctx.ResultText(cur.response.Status)
@@ -283,16 +286,23 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 		start := time.Now()
 		cur.timing.BodyStart = &start
 
-		body, _ := ioutil.ReadAll(cur.response.Body)
-
+		body, err := ioutil.ReadAll(cur.response.Body)
 		end := time.Now()
 		cur.timing.BodyEnd = &end
 
-		ctx.ResultBlob(body)
+		if err != nil {
+			ctx.ResultError(err)
+		} else {
+			ctx.ResultBlob(body)
+		}
 	case "remote_address":
 		ctx.ResultText(cur.meta.RemoteAddr)
 	case "timings":
-		buf, _ := json.Marshal(cur.timing)
+		buf, err := json.Marshal(cur.timing)
+		if err != nil {
+			ctx.ResultError(err)
+			return nil
+		} 		
 		ctx.ResultText(string(buf))
 	case "meta":
 		ctx.ResultNull()

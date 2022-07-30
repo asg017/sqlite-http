@@ -73,7 +73,11 @@ func HeadersEachIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy
 			}
 		}
 	}
-	header, _ := readHeader(rawHeader)
+	header, err := readHeader(rawHeader)
+	if err != nil {
+		return nil, err
+	} 
+	
 	cursor := HeaderEachCursor{
 		header:        header,
 		currentKeyI:   0,
@@ -96,8 +100,7 @@ func HeadersEachIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy
 
 func readHeader(rawHeader string) (textproto.MIMEHeader, error) {
 	headerReader := textproto.NewReader(bufio.NewReader(strings.NewReader(rawHeader)))
-	header, _ := headerReader.ReadMIMEHeader()
-	return header, nil
+	return headerReader.ReadMIMEHeader()
 }
 
 type HeadersHasFunc struct{}
@@ -152,8 +155,12 @@ func (*HeadersAllFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	}
 
 	all := headers.Values(key)
-	b, _ := json.Marshal(all)
-	c.ResultText(string(b))
+	b, err := json.Marshal(all)
+	if err != nil {
+		c.ResultError(err)
+	}else {
+		c.ResultText(string(b))
+	}
 }
 
 type HeadersFunc struct{}

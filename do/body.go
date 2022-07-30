@@ -49,7 +49,11 @@ func (*HttpDoBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	if err != nil {
 		c.ResultError(err)
 	} else {
-		body, _ := ioutil.ReadAll(response.Body)
+		body, err = ioutil.ReadAll(response.Body)
+		if err != nil {
+			c.ResultError(err)
+			return
+		} 
 		c.ResultBlob(body)
 	}
 }
@@ -92,10 +96,14 @@ func (*HttpPostBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 
 	if err != nil {
 		c.ResultError(err)
-	} else {
-		body, _ := ioutil.ReadAll(response.Body)
-		c.ResultBlob(body)
-	}
+		return
+	} 
+	body, err = ioutil.ReadAll(response.Body)
+	if err != nil {
+		c.ResultError(err)
+		return
+	} 
+	c.ResultBlob(body)
 }
 
 // http_get_body(url, headers, cookies)
@@ -133,7 +141,12 @@ func (*HttpGetBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	if err != nil {
 		c.ResultError(err)
 	} else {
-		body, _ := ioutil.ReadAll(response.Body)
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			c.ResultError(err)
+			return
+		} 
+	
 		c.ResultBlob(body)
 	}
 }
