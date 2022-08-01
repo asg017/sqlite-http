@@ -1,16 +1,16 @@
-package http_do
+package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
-	"net/textproto"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,11 +18,275 @@ import (
 	"go.riyazali.net/sqlite"
 )
 
+// timestamp layout to match SQLite's 'datetime()' format, ISO8601 subset
 const sqliteDatetimeFormat = "2006-01-02 15:04:05.999"
 
+// Format ghe given time as a SQLite date timestamp
 func formatSqliteDatetime(t *time.Time) *string {
 	s := t.UTC().Format(sqliteDatetimeFormat)
 	return &s
+}
+
+// Give the result of the given HTTP request as a SQLite response, the body
+func resultResponseBody(client *http.Client, request *http.Request, ctx *sqlite.Context) {
+	response, err := client.Do(request)
+
+	if err != nil {
+		ctx.ResultError(err)
+		return
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		ctx.ResultError(err)
+		return
+	}
+	ctx.ResultBlob(body)
+}
+
+// Give the result of the given HTTP request as a SQLite response, the headers
+func resultResponseHeaders(client *http.Client, request *http.Request, ctx *sqlite.Context) {
+	response, err := client.Do(request)
+
+	if err != nil {
+		ctx.ResultError(err)
+		return
+	}
+	buf := new(bytes.Buffer)
+	response.Header.Write(buf)
+	ctx.ResultText(buf.String())
+}
+
+/* http_do_body(method, url, headers, body, cookies)
+* Perform a HTTP request with the given method, URL, headers,
+* body, and cookies. Returns the HTTP body as a BLOB, errors if fails.
+ */
+type HttpDoBodyFunc struct{}
+
+func (*HttpDoBodyFunc) Deterministic() bool { return true }
+func (*HttpDoBodyFunc) Args() int           { return -1 }
+func (*HttpDoBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 2 || len(values) > 5 {
+		c.ResultError(errors.New("usage: http_do_body(method, url, headers, body, cookies)"))
+		return
+	}
+
+	method := values[0].Text()
+	url := values[1].Text()
+	var headers string
+	var cookies string
+	var body []byte
+
+	if len(values) >= 3 {
+		headers = values[2].Text()
+	}
+
+	if len(values) >= 4 {
+		body = values[3].Blob()
+	}
+	if len(values) >= 5 {
+		cookies = values[4].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
+
+	if err != nil {
+		c.ResultError(err)
+		return
+	}
+
+	resultResponseBody(client, request, c)
+
+}
+
+/* http_post_body(url, headers, body, cookies)
+* Perform a POST request with the given URL, headers,
+* body, and cookies. Returns the HTTP body as a BLOB, errors if fails.
+ */
+type HttpPostBodyFunc struct{}
+
+func (*HttpPostBodyFunc) Deterministic() bool { return true }
+func (*HttpPostBodyFunc) Args() int           { return -1 }
+func (*HttpPostBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 1 || len(values) > 4 {
+		c.ResultError(errors.New("usage: http_post_body(url, headers, body, cookies)"))
+		return
+	}
+
+	url := values[0].Text()
+	var headers string
+	var cookies string
+	var body []byte
+
+	if len(values) >= 2 {
+		headers = values[1].Text()
+	}
+
+	if len(values) >= 3 {
+		body = values[2].Blob()
+	}
+	if len(values) >= 4 {
+		cookies = values[3].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
+	if err != nil {
+		c.ResultError(err)
+		return
+	}
+
+	resultResponseBody(client, request, c)
+}
+
+/* http_get_body(url, headers, cookies)
+* Perform a HTTP request with the given URL, headers, and cookies.
+* Returns the HTTP body as a BLOB, errors if fails.
+ */
+type HttpGetBodyFunc struct{}
+
+func (*HttpGetBodyFunc) Deterministic() bool { return true }
+func (*HttpGetBodyFunc) Args() int           { return -1 }
+func (*HttpGetBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 1 || len(values) > 3 {
+		c.ResultError(errors.New("usage: http_get_body(url, headers, cookies)"))
+		return
+	}
+
+	url := values[0].Text()
+	var headers string
+	var cookies string
+
+	if len(values) >= 2 {
+		headers = values[1].Text()
+	}
+
+	if len(values) >= 3 {
+		cookies = values[2].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: "GET", url: url, headers: headers, body: nil, cookies: cookies})
+	if err != nil {
+		c.ResultError(err)
+		return
+	}
+
+	resultResponseBody(client, request, c)
+}
+
+/* http_get_headers(method, url, headers, body, cookies)
+* Perform a HTTP request with the given method, URL, headers,
+* body, and cookies.
+* Returns the HTTP response headers in wire format, errors if fails.
+ */
+type HttpGetHeadersFunc struct{}
+
+func (*HttpGetHeadersFunc) Deterministic() bool { return true }
+func (*HttpGetHeadersFunc) Args() int           { return -1 }
+func (*HttpGetHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 1 || len(values) > 3 {
+		c.ResultError(errors.New("usage: http_get_headers(url, headers, cookies)"))
+		return
+	}
+
+	url := values[0].Text()
+	var headers string
+	var cookies string
+
+	if len(values) >= 2 {
+		headers = values[1].Text()
+	}
+
+	if len(values) >= 3 {
+		cookies = values[2].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: "GET", url: url, headers: headers, body: nil, cookies: cookies})
+	if err != nil {
+		c.ResultError(err)
+		return
+	}
+
+	resultResponseHeaders(client, request, c)
+}
+
+// http_post_headers(url, headers, body, cookies)
+type HttpPostHeadersFunc struct{}
+
+func (*HttpPostHeadersFunc) Deterministic() bool { return true }
+func (*HttpPostHeadersFunc) Args() int           { return -1 }
+func (*HttpPostHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 1 || len(values) > 4 {
+		c.ResultError(errors.New("usage: http_post_headers(url, headers, body, cookies)"))
+		return
+	}
+
+	url := values[0].Text()
+	var headers string
+	var cookies string
+	var body []byte
+
+	if len(values) >= 2 {
+		headers = values[1].Text()
+	}
+
+	if len(values) >= 3 {
+		body = values[2].Blob()
+	}
+	if len(values) >= 3 {
+		cookies = values[3].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
+	if err != nil {
+		fmt.Println(err)
+		c.ResultError(err)
+	}
+
+	resultResponseHeaders(client, request, c)
+}
+
+// http_do_headers(method, url, headers, body, cookies)
+type HttpDoHeadersFunc struct{}
+
+func (*HttpDoHeadersFunc) Deterministic() bool { return true }
+func (*HttpDoHeadersFunc) Args() int           { return -1 }
+func (*HttpDoHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values) < 2 || len(values) > 5 {
+		c.ResultError(errors.New("usage: http_do_headers(method, url, headers, body, cookies)"))
+		return
+	}
+
+	method := values[0].Text()
+	url := values[1].Text()
+	var headers string
+	var cookies string
+	var body []byte
+
+	if len(values) >= 3 {
+		headers = values[2].Text()
+	}
+
+	if len(values) >= 4 {
+		body = values[3].Blob()
+	}
+	if len(values) >= 5 {
+		cookies = values[4].Text()
+	}
+
+	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
+
+	if err != nil {
+		fmt.Println(err)
+		c.ResultError(err)
+	}
+
+	resultResponseHeaders(client, request, c)
 }
 
 var SharedDoTableColumns = []vtab.Column{
@@ -77,11 +341,6 @@ type Timings struct {
 	WroteHeaders      *time.Time
 	BodyStart         *time.Time
 	BodyEnd           *time.Time
-}
-
-func readHeader(rawHeader string) (textproto.MIMEHeader, error) {
-	headerReader := textproto.NewReader(bufio.NewReader(strings.NewReader(rawHeader)))
-	return headerReader.ReadMIMEHeader()
 }
 
 type TimingJSON struct {
@@ -142,9 +401,6 @@ func (t Timings) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tj)
 }
 
-var DoTicker = time.NewTicker(time.Millisecond)
-var DoTimeout = 5 * time.Second
-
 type PrepareRequestParams struct {
 	method  string
 	url     string
@@ -158,18 +414,12 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 
 	request, err := http.NewRequest(params.method, params.url, bodyReader)
 	if err != nil {
-		fmt.Println("Error making request", params.url)
-		fmt.Println(err)
-		return nil, nil, sqlite.SQLITE_ERROR
+		return nil, nil, err
 	}
 
 	if params.headers != "" {
-		h, err := readHeader(params.headers)
+		h := readHeader(params.headers)
 
-		if err != nil {
-			fmt.Println("invalid headers")
-			return nil, nil, sqlite.SQLITE_ERROR
-		}
 		// step 1: clear default headers
 		for key := range request.Header {
 			request.Header.Del(key)
@@ -202,21 +452,22 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 		Timeout: DoTimeout,
 	}
 
+	// block to rate limit properly
 	<-DoTicker.C
 	return client, request, nil
-}
-
-type DoCursorMeta struct {
-	RemoteAddr string
 }
 
 type HttpDoCursor struct {
 	current int
 
-	request  *http.Request
+	// Original HTTP request made
+	request *http.Request
+	// HTTP response to the original request
 	response *http.Response
-	timing   Timings
-	meta     DoCursorMeta
+	// Timestamps of various lower-level events for the timings column
+	timing Timings
+	// Remote network address, filled in when HTTP connection is made, IP address
+	RemoteAddr string
 
 	columns []vtab.Column
 }
@@ -260,8 +511,8 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 		body, err := ioutil.ReadAll(cur.request.Body)
 		if err != nil {
 			ctx.ResultError(err)
-		} 
-	
+		}
+
 		ctx.ResultBlob(body)
 	case "response_status":
 		ctx.ResultText(cur.response.Status)
@@ -296,13 +547,13 @@ func (cur *HttpDoCursor) Column(ctx *sqlite.Context, c int) error {
 			ctx.ResultBlob(body)
 		}
 	case "remote_address":
-		ctx.ResultText(cur.meta.RemoteAddr)
+		ctx.ResultText(cur.RemoteAddr)
 	case "timings":
 		buf, err := json.Marshal(cur.timing)
 		if err != nil {
 			ctx.ResultError(err)
 			return nil
-		} 		
+		}
 		ctx.ResultText(string(buf))
 	case "meta":
 		ctx.ResultNull()
@@ -343,7 +594,6 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "GET", url: url, headers: headers, body: nil, cookies: cookies})
 	if err != nil {
-		fmt.Println(err)
 		return nil, sqlite.SQLITE_ERROR
 	}
 
@@ -354,8 +604,7 @@ func GetTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (
 
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Println(err)
-		//return nil, sqlite.SQLITE_ERROR
+		return nil, sqlite.SQLITE_ERROR
 	}
 
 	cursor.current = -1
@@ -469,6 +718,8 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 	return &cursor, nil
 }
 
+// For the given HTTP request, write all timing info to the given
+// cursor's "timing" object, so we can surface as a column later
 func traceAndInclude(request *http.Request, cursor *HttpDoCursor) *http.Request {
 
 	trace := &httptrace.ClientTrace{
@@ -500,7 +751,7 @@ func traceAndInclude(request *http.Request, cursor *HttpDoCursor) *http.Request 
 		GotConn: func(g httptrace.GotConnInfo) {
 			t := time.Now()
 			cursor.timing.GotConn = &t
-			cursor.meta.RemoteAddr = g.Conn.RemoteAddr().String()
+			cursor.RemoteAddr = g.Conn.RemoteAddr().String()
 		},
 		TLSHandshakeStart: func() {
 			t := time.Now()
@@ -519,4 +770,61 @@ func traceAndInclude(request *http.Request, cursor *HttpDoCursor) *http.Request 
 	}
 	return request.WithContext(httptrace.WithClientTrace(request.Context(), trace))
 
+}
+
+// http_post_form_url_encoded(name1, value1, ...)
+type HttpPostFormUrlEncoded struct{}
+
+func (*HttpPostFormUrlEncoded) Deterministic() bool { return true }
+func (*HttpPostFormUrlEncoded) Args() int           { return -1 }
+func (*HttpPostFormUrlEncoded) Apply(c *sqlite.Context, values ...sqlite.Value) {
+
+	if len(values)%2 != 0 {
+		c.ResultError(errors.New("http_post_form_url_encoded must have even-numbered arguments"))
+		return
+	}
+
+	data := url.Values{}
+
+	for i := 0; i < len(values); i = i + 2 {
+		key := values[i].Text()
+		value := values[i+1].Text()
+
+		data.Set(key, value)
+	}
+
+	c.ResultText(data.Encode())
+}
+
+// TODO HttpPostMultipartForm
+
+var DoModules = map[string]sqlite.Module{
+	"http_get":  vtab.NewTableFunc("http_get", GetTableColumns, GetTableIterator),
+	"http_post": vtab.NewTableFunc("http_post", PostTableColumns, PostTableIterator),
+	"http_do":   vtab.NewTableFunc("http_do", DoTableColumns, DoTableIterator),
+}
+var DoFunctions = map[string]sqlite.Function{
+	"http_get_body":             &HttpGetBodyFunc{},
+	"http_post_body":            &HttpPostBodyFunc{},
+	"http_do_body":              &HttpDoBodyFunc{},
+	"http_get_headers":          &HttpGetHeadersFunc{},
+	"http_post_headers":         &HttpPostHeadersFunc{},
+	"http_do_headers":           &HttpDoHeadersFunc{},
+	"http_post_form_urlencoded": &HttpPostFormUrlEncoded{},
+	"http_rate_limit":           &HttpRateLimit{},
+	"http_timeout_set":          &HttpTimeoutSet{},
+}
+
+func RegisterDo(api *sqlite.ExtensionApi) error {
+	for name, module := range DoModules {
+		if err := api.CreateModule(name, module); err != nil {
+			return err
+		}
+	}
+	for name, function := range DoFunctions {
+		if err := api.CreateFunction(name, function); err != nil {
+			return err
+		}
+	}
+	return nil
 }

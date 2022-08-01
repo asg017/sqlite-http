@@ -1,10 +1,6 @@
 package main
 
 import (
-	cookies "github.com/asg017/sqlite-http/cookies"
-	do "github.com/asg017/sqlite-http/do"
-	headers "github.com/asg017/sqlite-http/headers"
-	meta "github.com/asg017/sqlite-http/meta"
 	"go.riyazali.net/sqlite"
 )
 
@@ -13,32 +9,33 @@ var (
 	Commit  string
 	Date    string
 	Version string
-	// TODO should be in seperate script - this works, but the generated binary 
+	// TODO should be in seperate script - this works, but the generated binary
 	// should have no reference to do functions at all, should be slimmed-down binary
-	OmitNet  string
+	// Maybe a separate entrypoint?
+	OmitNet string
 )
 
 func init() {
-	OmitNet := OmitNet == "1"
 	sqlite.Register(func(api *sqlite.ExtensionApi) (sqlite.ErrorCode, error) {
 
-		if err := meta.Register(api, meta.RegisterParams{
-			Version: Version,
-			Commit:  Commit,
-			Date:    Date,
-		}); err != nil {
+		if err := RegisterMeta(api); err != nil {
 			return sqlite.SQLITE_ERROR, err
 		}
-
-		if !OmitNet {
-			if err := do.Register(api); err != nil {
+		
+		// If the "-X main.OmitNet=1" flag was provided, then don't
+		// include funcs that make network calls.
+		if OmitNet != "1" {
+			if err := RegisterDo(api); err != nil {
 				return sqlite.SQLITE_ERROR, err
 			}
+			if err := RegisterSettings(api); err != nil {
+				return sqlite.SQLITE_ERROR, err
+			}	
 		}
-		if err := headers.Register(api); err != nil {
+		if err := RegisterHeaders(api); err != nil {
 			return sqlite.SQLITE_ERROR, err
 		}
-		if err := cookies.Register(api); err != nil {
+		if err := RegisterCookies(api); err != nil {
 			return sqlite.SQLITE_ERROR, err
 		}
 

@@ -47,6 +47,7 @@ def read_sqlite_timestamp(ts):
   return datetime.fromisoformat(ts_padded)
 
 class TestHttp(unittest.TestCase):
+  
   def test_funcs(self):
     funcs = list(map(lambda a: a[0], db.execute("select name from fafter where name not in (select name from fbefore) order by name").fetchall()))
     self.assertEqual(funcs, [
@@ -57,7 +58,6 @@ class TestHttp(unittest.TestCase):
       "http_get_body",
       "http_get_headers",
       "http_headers",
-      "http_headers_all",
       "http_headers_get",
       "http_headers_has",
       "http_post_body",
@@ -83,7 +83,6 @@ class TestHttp(unittest.TestCase):
       "http_cookies",
       "http_debug",
       "http_headers",
-      "http_headers_all",
       "http_headers_get",
       "http_headers_has",
       # TODO should be a part of nodo

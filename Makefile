@@ -48,25 +48,25 @@ $(TARGET_LOADABLE):  $(shell find . -type f -name '*.go')
 	$(GO_BUILD_CGO_CFLAGS) go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_LDFLAGS) \
-	shared.go
+	.
 
 $(TARGET_LOADABLE_NO_NET):  $(shell find . -type f -name '*.go')
 	$(GO_BUILD_NO_NET_CGO_CFLAGS) go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
-	$(GO_BUILD_NO_NET) \
-	shared.go
+	$(GO_BUILD_NO_NET_LDFLAGS) \
+	.
 
 $(TARGET_OBJ):  $(shell find . -type f -name '*.go')
 	$(GO_BUILD_CGO_CFLAGS) CGO_ENABLED=1 go build -buildmode=c-archive \
 	$(GO_BUILD_LDFLAGS) \
-	-o $@ shared.go
+	-o $@ .
 
 # framework stuff is needed bc https://github.com/golang/go/issues/42459#issuecomment-896089738
 $(TARGET_SQLITE3): $(TARGET_OBJ) dist/sqlite3-extra.c sqlite/shell.c
 	gcc \
 	-framework CoreFoundation -framework Security \
 	dist/sqlite3-extra.c sqlite/shell.c $(TARGET_OBJ) \
-	-L. -I./ \
+	-L. -Isqlite \
 	-DSQLITE_EXTRA_INIT=core_init -DSQLITE3_INIT_FN=sqlite3_http_init \
 	-o $@
 
@@ -85,7 +85,7 @@ httpbin:
 clean:
 	rm dist/*
 
-test:
+test: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
 	python3 test.py
 
 test-watch:

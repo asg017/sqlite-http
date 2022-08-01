@@ -1,4 +1,4 @@
-package cookies
+package main
 
 import (
 	"encoding/json"
@@ -7,6 +7,9 @@ import (
 	"go.riyazali.net/sqlite"
 )
 
+// http_cookies(name1, value2, ...)
+// Returns a JSON object where keys nameN, and vlaues are valueN
+// Meant as a parameter for request functions like http_get and http_get_body
 type CookiesFunc struct{}
 
 func (*CookiesFunc) Deterministic() bool { return true }
@@ -29,4 +32,12 @@ func (*CookiesFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	} else {
 		c.ResultText(string(txt))
 	}
+}
+
+func RegisterCookies(api *sqlite.ExtensionApi) error {
+	if err := api.CreateFunction("http_cookies", &CookiesFunc{}); err != nil {
+		return err
+	}
+
+	return nil
 }
