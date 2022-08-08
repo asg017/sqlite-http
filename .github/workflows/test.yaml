@@ -20,6 +20,8 @@ jobs:
         with:
           go-version: 1.17
       - name: Build
+        env:
+          SKIP_NET: "1"
         run: |
           make loadable
           make test-loadable
