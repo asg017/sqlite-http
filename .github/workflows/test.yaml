@@ -1,0 +1,25 @@
+on: [push]
+name: "test"
+jobs:
+  build:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          # 2022 uses python 3.9, which we need to have json funcs in sqlite for test.py.
+          - os: windows-2022
+          - os: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      # using actions/setup-go@v1 is the only way to get macos build to work.
+      # otherwise, with v2, would get this cgo error: 'cgo-generated-wrappers:13:13: error: redefinition of 'free' as different kind of symbol'
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - name: Build
+        run: |
+          make loadable
+          make test-loadable
