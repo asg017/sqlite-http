@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/mail"
 	"net/textproto"
 	"strings"
 
@@ -21,12 +22,12 @@ func readHeader(rawHeader string) textproto.MIMEHeader {
 	return header
 }
 
-/** select key, value from http_headers_each(headers)
+/** select name, value from http_headers_each(headers)
  * A table function for enumerating each header found in headers.
  */
 var HeaderEachColumns = []vtab.Column{
 	{Name: "headers", Type: sqlite.SQLITE_TEXT.String(), NotNull: true, Hidden: true, Filters: []*vtab.ColumnFilter{{Op: sqlite.INDEX_CONSTRAINT_EQ, Required: true, OmitCheck: true}}},
-	{Name: "key", Type: sqlite.SQLITE_TEXT.String()},
+	{Name: "name", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "value", Type: sqlite.SQLITE_TEXT.String()},
 }
 
@@ -41,7 +42,7 @@ func (cur *HeaderEachCursor) Column(ctx *sqlite.Context, c int) error {
 	col := HeaderEachColumns[c]
 
 	switch col.Name {
-	case "key":
+	case "name":
 		ctx.ResultText(cur.keyOrder[cur.currentKeyI])
 	case "value":
 		ctx.ResultText(cur.header.Values(cur.keyOrder[cur.currentKeyI])[cur.currentValueI])
@@ -136,6 +137,22 @@ func (*HeadersGetFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	}
 }
 
+/* http_headers_date(header)
+ *
+ */
+type HeadersDateFunc struct{}
+
+func (*HeadersDateFunc) Deterministic() bool { return true }
+func (*HeadersDateFunc) Args() int           { return 1 }
+func (*HeadersDateFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
+	t, err := mail.ParseDate(values[0].Text())
+	if err != nil || t.IsZero() {
+		c.ResultNull()
+	} else {
+		c.ResultText(*formatSqliteDatetime(&t))
+	}
+}
+
 /* http_headers(name1, value1, ...)
  * Utilty for constructing headers in wire format.
  */
@@ -173,6 +190,9 @@ func RegisterHeaders(api *sqlite.ExtensionApi) error {
 		return err
 	}
 	if err := api.CreateFunction("http_headers_get", &HeadersGetFunc{}); err != nil {
+		return err
+	}
+	if err := api.CreateFunction("http_headers_date", &HeadersDateFunc{}); err != nil {
 		return err
 	}
 	return nil

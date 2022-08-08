@@ -58,6 +58,7 @@ class TestHttp(unittest.TestCase):
       "http_get_body",
       "http_get_headers",
       "http_headers",
+      "http_headers_date",
       "http_headers_get",
       "http_headers_has",
       "http_post_body",
@@ -83,6 +84,7 @@ class TestHttp(unittest.TestCase):
       "http_cookies",
       "http_debug",
       "http_headers",
+      "http_headers_date",
       "http_headers_get",
       "http_headers_has",
       # TODO should be a part of nodo
@@ -184,6 +186,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(h2, "Dup: a\r\nDup: b\r\n")
   
   def test_http_headers_each(self):
+    # TODO is order in http_headers_each non-deterministic? sometimes weird sort...
     rows = db.execute("""
       select * 
       from http_headers_each(
@@ -193,15 +196,16 @@ class TestHttp(unittest.TestCase):
           "user-agent", "4"
         )
       )
+      ORDER BY NAME
     """).fetchall()
-    self.assertEqual(len(rows), 3)
-    self.assertEqual(rows[0]["key"], "A")
-    self.assertEqual(rows[0]["value"], "1")
-    self.assertEqual(rows[1]["key"], "A")
-    self.assertEqual(rows[1]["value"], "2")
-    self.assertEqual(rows[2]["key"], "User-Agent")
-    self.assertEqual(rows[2]["value"], "4")
-    
+    self.assertEqual(list(map(lambda x: dict(x), rows)), [
+      {"name": "A", "value": "1"},
+      {"name": "A", "value": "2"},
+      {"name": "User-Agent", "value": "4"},
+      
+      
+    ])
+
   # TODO manually check skip_do for http_get to tests headers func seperately
   @skip_do
   def test_http_headers_get(self):
@@ -242,6 +246,11 @@ class TestHttp(unittest.TestCase):
     """).fetchone()
     self.assertEqual(a, 1)
     self.assertEqual(b, 0)
+  
+  def test_http_headers_date(self):
+    http_headers_date = lambda x: db.execute("select http_headers_date(?)", [x]).fetchone()[0]
+    self.assertEqual(http_headers_date('Sun, 06 Nov 1994 08:49:37 GMT'), '1994-11-06 08:49:37')
+    self.assertEqual(http_headers_date('N/A'), None)
   
   @skip_do
   def test_http_post_body(self):

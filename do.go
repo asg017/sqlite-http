@@ -176,9 +176,8 @@ func (*HttpGetBodyFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	resultResponseBody(client, request, c)
 }
 
-/* http_get_headers(method, url, headers, body, cookies)
-* Perform a HTTP request with the given method, URL, headers,
-* body, and cookies.
+/* http_get_headers(url, headers, body, cookies)
+* Perform a GET request on the given URL, headers, body, and cookies.
 * Returns the HTTP response headers in wire format, errors if fails.
  */
 type HttpGetHeadersFunc struct{}
@@ -243,7 +242,6 @@ func (*HttpPostHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
-		fmt.Println(err)
 		c.ResultError(err)
 	}
 
@@ -282,7 +280,6 @@ func (*HttpDoHeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
 
 	if err != nil {
-		fmt.Println(err)
 		c.ResultError(err)
 	}
 
@@ -409,6 +406,7 @@ type PrepareRequestParams struct {
 	cookies string
 }
 
+// helper functions around http.NewRequest, takes  headers/body in sqlite-http formats
 func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, error) {
 	bodyReader := bytes.NewReader(params.body)
 
@@ -437,8 +435,7 @@ func prepareRequest(params *PrepareRequestParams) (*http.Client, *http.Request, 
 		var parsed map[string]string
 		err := json.Unmarshal([]byte(params.cookies), &parsed)
 		if err != nil {
-			fmt.Println("invalid cookies")
-			return nil, nil, sqlite.SQLITE_ERROR
+			return nil, nil, errors.New("invalid cookes")
 		}
 
 		for name, value := range parsed {
@@ -641,8 +638,7 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
-		fmt.Println("Error preparing request", err)
-		return nil, sqlite.SQLITE_ERROR
+		return nil, fmt.Errorf("error preparing request: %s", err)
 	}
 
 	request = traceAndInclude(request, &cursor)
@@ -655,8 +651,7 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	// TODO make this configurable. I don't want it to always error
 	// if there's some connection error, but maybe other want that
 	if err != nil {
-		fmt.Println("error on client.Do", err)
-		return nil, sqlite.SQLITE_ERROR
+		return nil, fmt.Errorf("error on client.Do: %s", err)
 	}
 
 	cursor.current = -1
@@ -696,8 +691,7 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
-		fmt.Println(err)
-		return nil, sqlite.SQLITE_ERROR
+		return nil, fmt.Errorf("error preparing request: %s", err)
 	}
 
 	request = traceAndInclude(request, &cursor)
@@ -707,8 +701,7 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Println(err)
-		return nil, sqlite.SQLITE_ERROR
+		return nil, fmt.Errorf("error on client.Do: %s", err)
 	}
 
 	cursor.current = -1

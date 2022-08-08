@@ -21,7 +21,7 @@ func init() {
 		if err := RegisterMeta(api); err != nil {
 			return sqlite.SQLITE_ERROR, err
 		}
-		
+
 		// If the "-X main.OmitNet=1" flag was provided, then don't
 		// include funcs that make network calls.
 		if OmitNet != "1" {
@@ -30,7 +30,7 @@ func init() {
 			}
 			if err := RegisterSettings(api); err != nil {
 				return sqlite.SQLITE_ERROR, err
-			}	
+			}
 		}
 		if err := RegisterHeaders(api); err != nil {
 			return sqlite.SQLITE_ERROR, err
