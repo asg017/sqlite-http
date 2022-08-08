@@ -69,13 +69,15 @@ httpbin:
 clean:
 	rm dist/*
 
-test: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
-	python3 test.py
+test-loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
+	python3 tests/test-loadable.py
 
 test-watch:
-	watchexec --clear -w test.py make test
+	watchexec --clear -w tests/test-loadable.py make test-loadable
 
+test:
+	make test-loadable
 
 .PHONY: all format clean \
-	test test-watch httpbin \
+	test test-loadable test-watch httpbin \
 	loadable
