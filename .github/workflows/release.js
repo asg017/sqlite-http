@@ -26,8 +26,17 @@ module.exports = async ({ github, context }) => {
   }
   await Promise.all([
     uploadReleaseAsset("http0.so", "http0-linux-amd64/http0.so"),
+    uploadReleaseAsset("http0-no-net.so", "http0-linux-amd64/http0-no-net.so"),
     uploadReleaseAsset("http0.dylib", "http0-darwin-amd64/http0.dylib"),
+    uploadReleaseAsset(
+      "http0-no-net.dylib",
+      "http0-darwin-amd64/http0-no-net.dylib"
+    ),
     uploadReleaseAsset("http0.dll", "http0-windows-amd64/http0.dll"),
+    uploadReleaseAsset(
+      "http0-no-net.dll",
+      "http0-windows-amd64/http0-no-net.dll"
+    ),
   ]);
 
   return;
