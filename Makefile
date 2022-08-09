@@ -40,19 +40,21 @@ TARGET_SQLITE3=dist/sqlite3
 loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
 all: loadable 
 
-$(TARGET_LOADABLE):  $(shell find . -type f -name '*.go')
+GO_FILES= ./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
+
+$(TARGET_LOADABLE):  $(GO_FILES)
 	$(GO_BUILD_CGO_CFLAGS) go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_LDFLAGS) \
 	.
 
-$(TARGET_LOADABLE_NO_NET):  $(shell find . -type f -name '*.go')
+$(TARGET_LOADABLE_NO_NET):  $(GO_FILES)
 	$(GO_BUILD_NO_NET_CGO_CFLAGS) go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_NO_NET_LDFLAGS) \
 	.
 
-$(TARGET_OBJ):  $(shell find . -type f -name '*.go')
+$(TARGET_OBJ):  $(GO_FILES)
 	$(GO_BUILD_CGO_CFLAGS) CGO_ENABLED=1 go build -buildmode=c-archive \
 	$(GO_BUILD_LDFLAGS) \
 	-o $@ .
