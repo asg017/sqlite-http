@@ -93,8 +93,10 @@ class TestHttp(unittest.TestCase):
     ])
 
   def test_version(self):
+    with open("./VERSION") as f:                                                
+      version = f.read()  
     v, = db.execute("select http_version()").fetchone()
-    self.assertEqual(v, "v0.0.0")
+    self.assertEqual(v, version)
   
   def test_debug(self):
     d, = db.execute("select http_debug()").fetchone()
