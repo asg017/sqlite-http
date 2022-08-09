@@ -7,13 +7,13 @@ permissions:
   contents: read
 jobs:
   build-macos:
-    name: Build for MacOS
+    name: Release for MacOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build
+      - name: Release
         env:
-          ENV: CI
+          SKIP_NET: "1"
         run: |
           mkdir -p dist/
           make test-loadable
@@ -23,13 +23,13 @@ jobs:
           name: http0-darwin-amd64
           path: dist
   build-linux:
-    name: Build for Linux
+    name: Release for Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build
+      - name: Release
         env:
-          ENV: CI
+          SKIP_NET: "1"
         run: |
           mkdir -p dist/
           make test-loadable
@@ -39,13 +39,13 @@ jobs:
           name: http0-linux-amd64
           path: dist
   build-windows:
-    name: Build for Windows
+    name: Release for Windows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Build
+      - name: Release
         env:
-          ENV: CI
+          SKIP_NET: "1"
         run: |
           mkdir -p dist/
           make test-loadable
