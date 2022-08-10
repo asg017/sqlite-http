@@ -2,8 +2,8 @@
 
 A SQLite extension for making HTTP requests purely in SQL.
 
-- Create GET, POST, or other HTTP requests and download responses, like `curl`, `wget`, and `fetch`
-- Query HTTP headers, cookies, timing information
+- Create GET, POST, and other HTTP requests, like `curl`, `wget`, and `fetch`
+- Download response bodies, header, status codes, timing info
 - Set rate limits, timeouts
 
 ## Usage
@@ -20,13 +20,69 @@ select http_get_body('https://text.npr.org/');
 */
 ```
 
+Query for all custom headers in an endpoint.
+
+```sql
+select name, value
+from http_headers_each(
+  http_get_headers('https://api.github.com/')
+)
+where name like 'X-%';
+/*
+┌────────────────────────┬────────────────────────────────────┐
+│          name          │               value                │
+├────────────────────────┼────────────────────────────────────┤
+│ X-Ratelimit-Limit      │ 60                                 │
+│ X-Ratelimit-Used       │ 8                                  │
+│ X-Content-Type-Options │ nosniff                            │
+│ X-Github-Media-Type    │ github.v3; format=json             │
+│ X-Github-Request-Id    │ CCCA:5FDF:1014BC2:10965F9:62F3DE4E │
+│ X-Ratelimit-Remaining  │ 52                                 │
+│ X-Ratelimit-Resource   │ core                               │
+│ X-Frame-Options        │ deny                               │
+│ X-Ratelimit-Reset      │ 1660152798                         │
+│ X-Xss-Protection       │ 0                                  │
+└────────────────────────┴────────────────────────────────────┘
+*/
+```
+
+Scrape data from a JSON endpoint.
+
+```sql
+select http_get_body('https://api.github.com/repos/sqlite/sqlite')
+  ->> '$.description' as description;
+/*
+┌───────────────────────────────────────────────┐
+│                  description                  │
+├───────────────────────────────────────────────┤
+│ Official Git mirror of the SQLite source tree │
+└───────────────────────────────────────────────┘
+*/
+```
+
+Pass in specific headers in a request.
+
+```sql
+select
+  value
+from json_each(
+  http_get_body(
+    'https://api.github.com/issues',
+    http_headers(
+      'Authorization', 'token ghp_16C7e42F292c6912E7710c8'
+    )
+  )
+);
+
+```
+
 ## Documentation
 
 See [`docs.md`](./docs.md) for a full API reference.
 
 ## Installing
 
-The [Releases page](https://github.com/asg017/sqlite-lines/releases) contains pre-built binaries for Linux amd64, MacOS amd64 (no arm), and Windows.
+The [Releases page](https://github.com/asg017/sqlite-http/releases) contains pre-built binaries for Linux amd64, MacOS amd64 (no arm), and Windows.
 
 ### As a loadable extension
 
@@ -63,24 +119,16 @@ Or in Node.js using [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
 const Database = require("better-sqlite3");
 const db = new Database(":memory:");
 
-db.loadExtension("./lines0");
+db.loadExtension("./http0");
 
 console.log(db.prepare("select http_version()").get());
 // { 'http_version()': 'v0.0.1' }
 ```
 
-Or with [Datasette](https://datasette.io/) TODO:
+Or with [Datasette](https://datasette.io/), with the "no network" option to limit DDoS attacks:
 
 ```
-datasette data.db --load-extension ./http0
-```
-
-## Testing
-
-Testing the output `.so` is in `test.py`. Tests require a local instance of [httpbin](https://httpbin.org/) to work. If you have docker, run `docker httpbin` to start an instance on port 8080. If you want to skip tests that require httpbin (ex CI scripts), then set a `SKIP_DO` environment varaible to `""`, like sp:
-
-```
-SKIP_DO=1; python3 test.py
+datasette data.db --load-extension ./http0-no-net
 ```
 
 ## See also
