@@ -101,6 +101,12 @@ select http_get_body(
 
 All request methods also support a cookies argument, to send cookies alongside a request. This is still being worked on so it's unstable, but the `http_cookies` function creates cookies that can be sent along.
 
+<h3 name="no-net"> "No network" compile time option</h3>
+
+sqlite-http can be compiled with the `-X main.OmitNet=1` option, which disables all functions that make HTTP requests like `http_get()`, `http_get_body()`, etc. This is because in some SQLite environments, untrusted users can execute arbitrary SQL code, which can become a security issue. However, it can still be useful to include other sqlite-http functions like `http_headers_each()` or `http_headers_date()`, which don't make HTTP requests.
+
+The [Releases page](https://github.com/asg017/sqlite-http/releases) contain these "no network" compiled extensions with a `-no-net` suffix, if your use-case requires it.
+
 ## Error States
 
 All table and scalar functions that make HTTP requests will fail and error in the following circumstances:
