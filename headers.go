@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"io"
+	"fmt"
 	"net/http"
 	"net/mail"
 	"net/textproto"
 	"strings"
 
-	"github.com/augmentable-dev/vtab"
 	"go.riyazali.net/sqlite"
 )
 
@@ -25,6 +24,7 @@ func readHeader(rawHeader string) textproto.MIMEHeader {
 /** select name, value from http_headers_each(headers)
  * A table function for enumerating each header found in headers.
  */
+ /*
 var HeaderEachColumns = []vtab.Column{
 	{Name: "headers", Type: sqlite.SQLITE_TEXT.String(), NotNull: true, Hidden: true, Filters: []*vtab.ColumnFilter{{Op: sqlite.INDEX_CONSTRAINT_EQ, Required: true, OmitCheck: true}}},
 	{Name: "name", Type: sqlite.SQLITE_TEXT.String()},
@@ -94,6 +94,7 @@ func HeadersEachIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy
 	return &cursor, nil
 
 }
+*/
 
 /* http_headers_has(headers, key)
 * Returns 1 if there is at least one header in headers with the given key,
@@ -153,6 +154,120 @@ func (*HeadersDateFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	}
 }
 
+
+var headersEachColumns = []string{
+	"headers hidden",
+	"name text",
+	"value text",
+}
+type HeadersEachModule struct {}
+
+func (e *HeadersEachModule) Connect(_ *sqlite.Conn, _ []string, declare func(string) error) (sqlite.VirtualTable, error) {
+	filesCreate := strings.Builder{}
+	filesCreate.WriteString("CREATE TABLE x(")
+	for i, column := range headersEachColumns {
+		if i != len(headersEachColumns)-1 {
+			filesCreate.WriteString(fmt.Sprintf("%s,", column))
+		} else {
+			filesCreate.WriteString(column)
+		}
+	}
+	filesCreate.WriteString(")")
+	return &HeadersEachTable{}, declare(filesCreate.String())
+}
+
+type HeadersEachTable struct {}
+
+func (e *HeadersEachTable) BestIndex(input *sqlite.IndexInfoInput) (*sqlite.IndexInfoOutput, error) {
+	var output = &sqlite.IndexInfoOutput{
+		ConstraintUsage: make([]*sqlite.ConstraintUsage, len(input.Constraints)),
+	}
+	var hasHeaders bool
+	for i, constraint := range input.Constraints {
+		if constraint.Op == sqlite.INDEX_CONSTRAINT_EQ {
+			column := headersEachColumns[constraint.ColumnIndex]
+			switch column {
+			case "headers":
+				if !constraint.Usable {
+					return nil, sqlite.SQLITE_CONSTRAINT
+				}
+				output.ConstraintUsage[i] = &sqlite.ConstraintUsage{ArgvIndex: 1, Omit: true}
+				hasHeaders = true
+			}
+		}
+	}
+	if !hasHeaders {
+		return nil, sqlite.SQLITE_ERROR
+	}
+	
+	output.EstimatedCost = 1000
+	output.EstimatedRows = 1000
+	output.IndexNumber = 1
+	return output, nil
+}
+
+func (e *HeadersEachTable) Open() (sqlite.VirtualCursor, error) {
+	return &HeadersEachCursor{}, nil
+}
+func (e *HeadersEachTable) Disconnect() error { return e.Destroy() }
+func (e *HeadersEachTable) Destroy() error    { return nil }
+
+type HeadersEachCursor struct {
+	rowid        int64
+	header        textproto.MIMEHeader
+	keyOrder      []string
+	currentKeyI   int
+	currentValueI int
+	done bool
+}
+
+
+func (cur *HeadersEachCursor) Filter(idxNum int, idxStr string, values ...sqlite.Value) error {
+	
+	cur.rowid = 1
+	return nil
+}
+
+func (cur *HeadersEachCursor) Next() error {
+	cur.rowid++
+
+	cur.currentValueI += 1
+
+	if cur.currentKeyI >= len(cur.keyOrder) {
+		cur.done = true
+		return nil
+	}
+	if cur.currentValueI >= len(cur.header.Values(cur.keyOrder[cur.currentKeyI])) {
+		cur.currentKeyI += 1
+		cur.currentValueI = 0
+	}
+	if cur.currentKeyI >= len(cur.keyOrder) {
+		cur.done = true
+		return nil
+	}
+	return nil
+}
+func (cur *HeadersEachCursor) Eof() bool {
+	return cur.done
+}
+
+
+func (cur *HeadersEachCursor) Column(context *sqlite.VirtualTableContext, i int) error {
+	col := headersEachColumns[i]
+
+	switch col {
+	case "name":
+		context.ResultText(cur.keyOrder[cur.currentKeyI])
+	case "value":
+		context.ResultText(cur.header.Values(cur.keyOrder[cur.currentKeyI])[cur.currentValueI])
+	}
+	return nil
+}
+
+func (cur *HeadersEachCursor) Rowid() (int64, error) { return cur.rowid, nil }
+func (cur *HeadersEachCursor) Close() error          { return nil }
+
+
 /* http_headers(name1, value1, ...)
  * Utilty for constructing headers in wire format.
  */
@@ -180,7 +295,7 @@ func (*HeadersFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 }
 
 func RegisterHeaders(api *sqlite.ExtensionApi) error {
-	if err := api.CreateModule("http_headers_each", vtab.NewTableFunc("http_headers_each", HeaderEachColumns, HeadersEachIterator)); err != nil {
+	if err := api.CreateModule("http_headers_each", &HeadersEachModule{}); err != nil {
 		return err
 	}
 	if err := api.CreateFunction("http_headers", &HeadersFunc{}); err != nil {

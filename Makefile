@@ -40,10 +40,10 @@ TARGET_SQLITE3=dist/sqlite3
 loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
 all: loadable 
 
-GO_FILES= ./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
+GO_FILES= ./cookies.go ./settings.go ./shared.go ./meta.go ./headers.go
 
 $(TARGET_LOADABLE):  $(GO_FILES)
-	$(GO_BUILD_CGO_CFLAGS) go build \
+	CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH=/Users/alex/projects/sqlite-http go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_LDFLAGS) \
 	.
