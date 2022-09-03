@@ -43,7 +43,7 @@ all: loadable
 GO_FILES= ./cookies.go ./settings.go ./shared.go ./meta.go ./headers.go
 
 $(TARGET_LOADABLE):  $(GO_FILES)
-	CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH=/Users/alex/projects/sqlite-http go build \
+	CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH=/Users/alex/projects/sqlite-http/sqlite go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_LDFLAGS) \
 	.

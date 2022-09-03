@@ -6,11 +6,13 @@ SQLITE_EXTENSION_INIT3
 // hook to call into golang functionality defined in go.riyazali.net/sqlite
 extern int go_sqlite3_extension_init(const char*, sqlite3*, char**);
 
+//export sqlite3_http_init
 int sqlite3_http_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines *pApi) {
 	SQLITE_EXTENSION_INIT2(pApi)
 	return go_sqlite3_extension_init("default", db, pzErrMsg);
 }
 
+//export sqlite3_http_no_network_init
 int sqlite3_http_no_network_init(sqlite3* db, char** pzErrMsg, const sqlite3_api_routines *pApi) {
 	SQLITE_EXTENSION_INIT2(pApi)
 	return go_sqlite3_extension_init("no_network", db, pzErrMsg);

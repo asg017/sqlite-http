@@ -36,12 +36,7 @@ func RegisterDefault(api *sqlite.ExtensionApi) (sqlite.ErrorCode, error) {
 		return sqlite.SQLITE_ERROR, err
 	}
 
-	/*
-	if err := RegisterMeta(api); err != nil {
-		return sqlite.SQLITE_ERROR, err
-	}
-
-	/*if err := RegisterDo(api); err != nil {
+	if err := RegisterDo(api); err != nil {
 		return sqlite.SQLITE_ERROR, err
 	}
 	if err := RegisterSettings(api); err != nil {
@@ -52,7 +47,7 @@ func RegisterDefault(api *sqlite.ExtensionApi) (sqlite.ErrorCode, error) {
 	}
 	if err := RegisterCookies(api); err != nil {
 		return sqlite.SQLITE_ERROR, err
-	}*/
+	}
 
 	return sqlite.SQLITE_OK, nil
 }
