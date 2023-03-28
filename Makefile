@@ -90,6 +90,7 @@ deno: VERSION deno/deno.json.tmpl
 
 version:
 	make python
+	make python-versions
 	make npm
 	make deno
 
