@@ -74,7 +74,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
       - run: make test-deno
         env:
-          DENO_SQLITE_http_PATH: ${{ github.workspace }}/dist/http0
+          DENO_SQLITE_HTTP_PATH: ${{ github.workspace }}/dist/http0
   build-macos-extension:
     runs-on: macos-latest
     steps:
@@ -149,7 +149,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
       - run: make test-deno
         env:
-          DENO_SQLITE_http_PATH: ${{ github.workspace }}/dist/http0.dylib
+          DENO_SQLITE_HTTP_PATH: ${{ github.workspace }}/dist/http0.dylib
   build-windows-extension:
     name: Building windows extension
     runs-on: windows-latest

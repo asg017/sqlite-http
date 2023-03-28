@@ -3,8 +3,10 @@ VERSION=$(shell git describe --tags --exact-match --always)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
+VENDOR_SQLITE=$(shell pwd)/sqlite
 GO_BUILD_LDFLAGS=-ldflags '-X main.Version=v$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)' 
-GO_BUILD_CGO_CFLAGS=CGO_CFLAGS=-DSQLITE3_INIT_FN=sqlite3_http_init
+GO_BUILD_CGO_CFLAGS=CGO_ENABLED=1 CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH="$(VENDOR_SQLITE)"
+
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
