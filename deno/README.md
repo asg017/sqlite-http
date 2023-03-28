@@ -3,13 +3,13 @@
 # `x/sqlite_http` Deno Module
 
 [![Tags](https://img.shields.io/github/release/asg017/sqlite-http)](https://github.com/asg017/sqlite-http/releases)
-[![Doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sqlite-http@0.1.0-alpha.1/mod.ts)
+[![Doc](https://doc.deno.land/badge.svg)](https://doc.deno.land/https/deno.land/x/sqlite-http@0.1.0-alpha.2/mod.ts)
 
 The [`sqlite-http`](https://github.com/asg017/sqlite-http) SQLite extension is available to Deno developers with the [`x/sqlite_http`](https://deno.land/x/sqlite-http) Deno module. It works with [`x/sqlite3`](https://deno.land/x/sqlite3), the fastest and native Deno SQLite3 module.
 
 ```js
 import { Database } from "https://deno.land/x/sqlite3@0.8.0/mod.ts";
-import * as sqlite_http from "https://deno.land/x/sqlite_http@v0.1.0-alpha.1/mod.ts";
+import * as sqlite_http from "https://deno.land/x/sqlite_http@v0.1.0-alpha.2/mod.ts";
 
 const db = new Database(":memory:");
 
