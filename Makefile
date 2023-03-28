@@ -110,8 +110,8 @@ httpbin:
 clean:
 	rm dist/*
 
-test-loadable: $(TARGET_LOADABLE)
-	python3 tests/test-loadable.py
+test-loadable:
+	$(PYTHON) tests/test-loadable.py
 
 test-python:
 	$(PYTHON) tests/test-python.py
