@@ -26,7 +26,7 @@ func readHeader(rawHeader string) textproto.MIMEHeader {
  * A table function for enumerating each header found in headers.
  */
 var HeaderEachColumns = []vtab.Column{
-	{Name: "headers", Type: sqlite.SQLITE_TEXT.String(), NotNull: true, Hidden: true, Filters: []*vtab.ColumnFilter{{Op: sqlite.INDEX_CONSTRAINT_EQ, Required: true, OmitCheck: true}}},
+	{Name: "headers", Type: sqlite.SQLITE_TEXT.String(), NotNull: true, Hidden: true, Filters: []*vtab.ColumnFilter{{Op: sqlite.INDEX_CONSTRAINT_EQ,  OmitCheck: true}}},
 	{Name: "name", Type: sqlite.SQLITE_TEXT.String()},
 	{Name: "value", Type: sqlite.SQLITE_TEXT.String()},
 }
@@ -38,7 +38,7 @@ type HeaderEachCursor struct {
 	currentValueI int
 }
 
-func (cur *HeaderEachCursor) Column(ctx *sqlite.Context, c int) error {
+func (cur *HeaderEachCursor) Column(ctx vtab.Context, c int) error {
 	col := HeaderEachColumns[c]
 
 	switch col.Name {

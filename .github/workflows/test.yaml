@@ -1,16 +1,8 @@
 on: [push]
 name: "test"
 jobs:
-  build:
-    name: Testing on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-          # 2022 uses python 3.9, which we need to have json funcs in sqlite for test.py.
-          - os: windows-2022
-          - os: macos-latest
+  build-linux_x86-extension:
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
       # using actions/setup-go@v1 is the only way to get macos build to work.
@@ -19,9 +11,199 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: 1.17
-      - name: Build
+      - run: make loadable
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-linux_x86
+          path: dist/http0.so
+  build-linux_x86-python:
+    runs-on: ubuntu-20.04
+    needs: [build-linux_x86-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-linux_x86
+          path: dist/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python
+      - run: make datasette
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-linux_x86-wheels
+          path: dist/wheels/*.whl
+  test-linux_x86:
+    runs-on: ubuntu-20.04
+    needs: [build-linux_x86-extension, build-linux_x86-python]
+    env:
+      DENO_DIR: deno_cache
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-linux_x86
+          path: dist/
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-linux_x86-wheels
+          path: dist/
+      - run: cp dist/http0.so npm/sqlite-http-linux-x64/lib
+      - run: pip3 install --find-links dist/ sqlite_http
+      - run: make test-loadable
         env:
           SKIP_NET: "1"
-        run: |
-          make loadable
-          make test-loadable
+      - run: make test-python
+      # for test-npm
+      - uses: actions/setup-node@v3
+        with:
+          cache: "npm"
+          cache-dependency-path: npm/sqlite-http/package.json
+      - run: npm install
+        working-directory: npm/sqlite-http
+      - run: make test-npm
+      # for test-deno
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.30
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.DENO_DIR }}
+          key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
+      - run: make test-deno
+        env:
+          DENO_SQLITE_http_PATH: ${{ github.workspace }}/dist/http0
+  build-macos-extension:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      # using actions/setup-go@v1 is the only way to get macos build to work.
+      # otherwise, with v2, would get this cgo error: 'cgo-generated-wrappers:13:13: error: redefinition of 'free' as different kind of symbol'
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - run: make loadable
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-macos
+          path: dist/http0.dylib
+  build-macos-python:
+    runs-on: macos-latest
+    needs: [build-macos-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-macos
+          path: dist/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python
+      - run: make datasette
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-macos-wheels
+          path: dist/wheels/*.whl
+  test-macos:
+    runs-on: macos-latest
+    needs: [build-macos-extension, build-macos-python]
+    env:
+      DENO_DIR: deno_cache
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-macos
+          path: dist/
+      - run: cp dist/http0.dylib npm/sqlite-http-darwin-x64/lib
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-macos-wheels
+          path: dist/
+      - run: brew install python
+      - run: /usr/local/opt/python@3/libexec/bin/pip install --find-links dist/ sqlite_http
+      - run: make test-loadable python=/usr/local/opt/python@3/libexec/bin/python
+        env:
+          SKIP_NET: "1"
+      - run: make test-python python=/usr/local/opt/python@3/libexec/bin/python
+      # for test-npm
+      - uses: actions/setup-node@v3
+        with:
+          cache: "npm"
+          cache-dependency-path: npm/sqlite-http/package.json
+      - run: npm install
+        working-directory: npm/sqlite-http
+      - run: make test-npm
+      # for test-deno
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.30
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.DENO_DIR }}
+          key: ${{ runner.os }}-${{ hashFiles('deno/deno.lock') }}
+      - run: make test-deno
+        env:
+          DENO_SQLITE_http_PATH: ${{ github.workspace }}/dist/http0.dylib
+  build-windows-extension:
+    name: Building windows extension
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      # using actions/setup-go@v1 is the only way to get macos build to work.
+      # otherwise, with v2, would get this cgo error: 'cgo-generated-wrappers:13:13: error: redefinition of 'free' as different kind of symbol'
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.17
+      - run: make loadable
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-windows
+          path: dist/http0.dll
+  build-windows-python:
+    runs-on: windows-latest
+    needs: [build-windows-extension]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download workflow artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-windows
+          path: dist/
+      - uses: actions/setup-python@v3
+      - run: pip install wheel
+      - run: make python
+      - run: make datasette
+      - uses: actions/upload-artifact@v3
+        with:
+          name: sqlite-http-windows-wheels
+          path: dist/wheels/*.whl
+  test-windows:
+    runs-on: windows-2022
+    needs: [build-windows-extension, build-windows-python]
+    env:
+      DENO_DIR: deno_cache
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-windows
+          path: dist/
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-windows
+          path: npm/sqlite-http-windows-x64/lib
+      - uses: actions/download-artifact@v3
+        with:
+          name: sqlite-http-windows-wheels
+          path: dist/
+      - run: pip install --find-links dist/ sqlite_http
+      - run: make test-loadable
+        env:
+          SKIP_NET: "1"

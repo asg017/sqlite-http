@@ -22,12 +22,18 @@ func (f *VersionFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 * Return a debug string of the loaded sqlite-http library.
 * Includes version string, build commit hash, go runtime info, and build date.
  */
-type DebugFunc struct{}
+type DebugFunc struct{noNetwork bool}
 
 func (*DebugFunc) Deterministic() bool { return true }
 func (*DebugFunc) Args() int           { return 0 }
 func (f *DebugFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
-	c.ResultText(fmt.Sprintf("Version: %s\nCommit: %s\nRuntime: %s %s/%s\nDate: %s\n",
+	var format string;
+	if f.noNetwork {
+		format = "Version: %s\nCommit: %s\nRuntime: %s %s/%s\nDate: %s\nNO NETWORK"
+	} else {
+	format = "Version: %s\nCommit: %s\nRuntime: %s %s/%s\nDate: %s"
+	}
+	c.ResultText(fmt.Sprintf(format,
 		Version,
 		Commit,
 		runtime.Version(),
@@ -37,11 +43,11 @@ func (f *DebugFunc) Apply(c *sqlite.Context, values ...sqlite.Value) {
 	))
 }
 
-func RegisterMeta(api *sqlite.ExtensionApi) error {
+func RegisterMeta(api *sqlite.ExtensionApi, noNetwork bool) error {
 	if err := api.CreateFunction("http_version", &VersionFunc{}); err != nil {
 		return err
 	}
-	if err := api.CreateFunction("http_debug", &DebugFunc{}); err != nil {
+	if err := api.CreateFunction("http_debug", &DebugFunc{noNetwork}); err != nil {
 		return err
 	}
 	return nil

@@ -3,10 +3,8 @@ VERSION=$(shell git describe --tags --exact-match --always)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
-GO_BUILD_LDFLAGS=-ldflags '-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)' 
-GO_BUILD_NO_NET_LDFLAGS=-ldflags '-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE) -X main.OmitNet=1'
+GO_BUILD_LDFLAGS=-ldflags '-X main.Version=v$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)' 
 GO_BUILD_CGO_CFLAGS=CGO_CFLAGS=-DSQLITE3_INIT_FN=sqlite3_http_init
-GO_BUILD_NO_NET_CGO_CFLAGS=CGO_CFLAGS=-DSQLITE3_INIT_FN=sqlite3_httpnonet_init
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -32,15 +30,31 @@ LOADABLE_EXTENSION=dll
 endif
 
 
-TARGET_LOADABLE=dist/http0.$(LOADABLE_EXTENSION)
-TARGET_LOADABLE_NO_NET=dist/http0-no-net.$(LOADABLE_EXTENSION)
-TARGET_OBJ=dist/http0.o
-TARGET_SQLITE3=dist/sqlite3
+ifdef python
+PYTHON=$(python)
+else
+PYTHON=python3
+endif
 
-loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
+prefix=dist
+
+TARGET_LOADABLE=$(prefix)/http0.$(LOADABLE_EXTENSION)
+TARGET_WHEELS=$(prefix)/wheels
+TARGET_OBJ=$(prefix)/http0.o
+TARGET_SQLITE3=$(prefix)/sqlite3
+
+INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_http/sqlite_http/http0.$(LOADABLE_EXTENSION)
+
+loadable: $(TARGET_LOADABLE)
 all: loadable 
 
 GO_FILES= ./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
+
+$(prefix):
+	mkdir -p $(prefix)
+
+$(TARGET_WHEELS): $(prefix)
+	mkdir -p $(TARGET_WHEELS)
 
 $(TARGET_LOADABLE):  $(GO_FILES)
 	$(GO_BUILD_CGO_CFLAGS) go build \
@@ -48,11 +62,34 @@ $(TARGET_LOADABLE):  $(GO_FILES)
 	$(GO_BUILD_LDFLAGS) \
 	.
 
-$(TARGET_LOADABLE_NO_NET):  $(GO_FILES)
-	$(GO_BUILD_NO_NET_CGO_CFLAGS) go build \
-	-buildmode=c-shared -o $@ -tags="shared" \
-	$(GO_BUILD_NO_NET_LDFLAGS) \
-	.
+python: $(TARGET_WHEELS) $(TARGET_LOADABLE) $(TARGET_WHEELS) scripts/rename-wheels.py $(shell find python/sqlite_http -type f -name '*.py')
+	cp $(TARGET_LOADABLE) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
+	rm $(TARGET_WHEELS)/sqlite_http* || true
+	pip3 wheel python/sqlite_http/ -w $(TARGET_WHEELS)
+	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
+	echo "✅ generated python wheel"
+
+python-versions: python/version.py.tmpl
+	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/sqlite_http/sqlite_http/version.py
+	echo "✅ generated python/sqlite_http/sqlite_http/version.py"
+
+	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/datasette_sqlite_http/datasette_sqlite_http/version.py
+	echo "✅ generated python/datasette_sqlite_http/datasette_sqlite_http/version.py"
+
+datasette: $(TARGET_WHEELS) $(shell find python/datasette_sqlite_http -type f -name '*.py')
+	rm $(TARGET_WHEELS)/datasette* || true
+	pip3 wheel python/datasette_sqlite_http/ --no-deps -w $(TARGET_WHEELS)
+
+npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.json.tmpl npm/sqlite-http/package.json.tmpl scripts/npm_generate_platform_packages.sh
+	scripts/npm_generate_platform_packages.sh
+
+deno: VERSION deno/deno.json.tmpl
+	scripts/deno_generate_package.sh
+
+version:
+	make python
+	make npm
+	make deno
 
 $(TARGET_OBJ):  $(GO_FILES)
 	$(GO_BUILD_CGO_CFLAGS) CGO_ENABLED=1 go build -buildmode=c-archive \
@@ -71,15 +108,28 @@ httpbin:
 clean:
 	rm dist/*
 
-test-loadable: $(TARGET_LOADABLE) $(TARGET_LOADABLE_NO_NET)
+test-loadable: $(TARGET_LOADABLE)
 	python3 tests/test-loadable.py
+
+test-python:
+	$(PYTHON) tests/test-python.py
+
+test-npm:
+	node npm/sqlite-http/test.js
+
+test-deno:
+	deno task --config deno/deno.json test
 
 test-watch:
 	watchexec --clear -w tests/test-loadable.py make test-loadable
 
 test:
 	make test-loadable
+	make test-python
+	make test-npm
+	make test-deno
 
 .PHONY: all format clean \
+	python python-versions datasette npm deno version \
 	test test-loadable test-watch httpbin \
 	loadable

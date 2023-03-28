@@ -5,7 +5,6 @@ import os
 from datetime import datetime, timedelta
 
 EXT_PATH = "dist/http0"
-EXT_PATHNO_NET = "dist/http0-no-net"
 
 should_skip_net = os.environ.get("SKIP_NET") == "1"
 
@@ -20,14 +19,18 @@ def skip_do(f):
   return wrapper
 
 
-def connect(entry:str) -> sqlite3.Cursor:
+def connect(path:str, entrypoint=None) -> sqlite3.Cursor:
   db = sqlite3.connect(":memory:")
 
   db.execute("create table fbefore as select name from pragma_function_list")
   db.execute("create table mbefore as select name from pragma_module_list")
 
   db.enable_load_extension(True)
-  db.load_extension(entry)
+  if entrypoint is None:
+    db.load_extension(path)
+  else:
+    db.execute("select load_extension(?, ?)", [path, entrypoint]).fetchall()
+  db.enable_load_extension(False)
 
   db.execute("create temp table fafter as select name from pragma_function_list")
   db.execute("create temp table mafter as select name from pragma_module_list")
@@ -36,7 +39,7 @@ def connect(entry:str) -> sqlite3.Cursor:
   return db
 
 db = connect(EXT_PATH)
-db_nonet = connect(EXT_PATHNO_NET)
+db_nonet = connect(EXT_PATH, 'sqlite3_http_no_network_init')
 
 # Fun fact: the SQLite datetime() format, with fractional seconds,
 # doesn't always have 3 digits of precision.
@@ -94,7 +97,7 @@ class TestHttp(unittest.TestCase):
 
   def test_version(self):
     with open("./VERSION") as f:                                                
-      version = f.read()  
+      version = 'v' + f.read()  
     v, = db.execute("select http_version()").fetchone()
     self.assertEqual(v, version)
   
@@ -106,6 +109,15 @@ class TestHttp(unittest.TestCase):
     self.assertTrue(lines[1].startswith("Commit"))
     self.assertTrue(lines[2].startswith("Runtime"))
     self.assertTrue(lines[3].startswith("Date"))
+
+    d, = db_nonet.execute("select http_debug()").fetchone()
+    lines = d.splitlines()
+    self.assertEqual(len(lines), 5)
+    self.assertTrue(lines[0].startswith("Version"))
+    self.assertTrue(lines[1].startswith("Commit"))
+    self.assertTrue(lines[2].startswith("Runtime"))
+    self.assertTrue(lines[3].startswith("Date"))
+    self.assertEqual(lines[4], "NO NETWORK")
 
   def test_http_cookies(self):
     d, = db.execute("""

@@ -4,3 +4,6 @@ deps/
 benchmarks
 examples/
 .vscode
+*.dylib
+*.so
+*.dll
