@@ -1,4 +1,4 @@
 # automatically generated, do not edit by hand.
-module SqliteHtml
+module SqliteHttp
   VERSION = "0.1.0-alpha.3"
 end
