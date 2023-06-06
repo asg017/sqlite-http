@@ -20,12 +20,6 @@ const [version] = db
   .prepare("select http_version()")
   .value<[string]>()!;
 
-console.log(
-  db
-    .prepare("select cast(http_get_body('https://api.github.com/rate_limit') as text)")
-    .value<[Uint8Array]>()!
-);
-
 console.log(version);
 
 ```

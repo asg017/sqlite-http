@@ -4,7 +4,7 @@ VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
 VENDOR_SQLITE=$(shell pwd)/sqlite
-GO_BUILD_LDFLAGS=-ldflags '-X main.Version=v$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)' 
+GO_BUILD_LDFLAGS=-ldflags '-X main.Version=v$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)'
 GO_BUILD_CGO_CFLAGS=CGO_ENABLED=1 CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH="$(VENDOR_SQLITE)"
 
 
@@ -48,7 +48,7 @@ TARGET_SQLITE3=$(prefix)/sqlite3
 INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_http/sqlite_http/http0.$(LOADABLE_EXTENSION)
 
 loadable: $(TARGET_LOADABLE)
-all: loadable 
+all: loadable
 
 GO_FILES= ./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
 
@@ -88,11 +88,17 @@ npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.js
 deno: VERSION deno/deno.json.tmpl
 	scripts/deno_generate_package.sh
 
+bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+
+ruby: bindings/ruby/lib/version.rb
+
 version:
 	make python
 	make python-versions
 	make npm
 	make deno
+	make ruby
 
 $(TARGET_OBJ):  $(GO_FILES)
 	$(GO_BUILD_CGO_CFLAGS) CGO_ENABLED=1 go build -buildmode=c-archive \
@@ -105,7 +111,7 @@ dist/sqlite3-extra.c: sqlite/sqlite3.c sqlite/core_init.c
 format:
 	gofmt -s -w .
 
-httpbin: 
+httpbin:
 	docker run -p 8080:80 kennethreitz/httpbin
 
 clean:
@@ -133,6 +139,6 @@ test:
 	make test-deno
 
 .PHONY: all format clean \
-	python python-versions datasette npm deno version \
+	python python-versions datasette npm deno ruby version \
 	test test-loadable test-watch httpbin \
 	loadable
