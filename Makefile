@@ -138,7 +138,10 @@ test:
 	make test-npm
 	make test-deno
 
-.PHONY: all format clean \
+publish-release:
+	./scripts/publish_release.sh
+
+.PHONY: all format clean publish-release \
 	python python-versions datasette npm deno ruby version \
 	test test-loadable test-watch httpbin \
 	loadable
