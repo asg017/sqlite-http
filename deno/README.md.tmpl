@@ -13,14 +13,14 @@ import * as sqlite_http from "https://deno.land/x/sqlite_http@v${VERSION}/mod.ts
 
 const db = new Database(":memory:");
 
-  db.enableLoadExtension = true;
-  db.loadExtension(sqlite_http.getLoadablePath());
+db.enableLoadExtension = true;
+sqlite_http.load(db);
 
-  const [version] = db
-    .prepare("select http_version()")
-    .value<[string]>()!;
+const [version] = db
+  .prepare("select http_version()")
+  .value<[string]>()!;
 
-  console.log(version);
+console.log(version);
 
 ```
 

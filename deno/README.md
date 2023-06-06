@@ -13,14 +13,20 @@ import * as sqlite_http from "https://deno.land/x/sqlite_http@v0.1.0-alpha.2/mod
 
 const db = new Database(":memory:");
 
-  db.enableLoadExtension = true;
-  db.loadExtension(sqlite_http.getLoadablePath());
+db.enableLoadExtension = true;
+sqlite_http.load(db);
 
-  const [version] = db
-    .prepare("select http_version()")
-    .value<[string]>()!;
+const [version] = db
+  .prepare("select http_version()")
+  .value<[string]>()!;
 
-  console.log(version);
+console.log(
+  db
+    .prepare("select cast(http_get_body('https://api.github.com/rate_limit') as text)")
+    .value<[Uint8Array]>()!
+);
+
+console.log(version);
 
 ```
 
