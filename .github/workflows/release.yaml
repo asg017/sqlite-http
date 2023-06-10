@@ -128,9 +128,9 @@ jobs:
           name: sqlite-http
           github-token: ${{ secrets.GITHUB_TOKEN }}
           platforms: |
-            linux-x86_64:     sqlite-http-linux_x86
-            macos-x86_64:     sqlite-http-macos
-            windows-x86_64:   sqlite-http-windows
+            linux-x86_64:     sqlite-http-linux_x86/*
+            macos-x86_64:     sqlite-http-macos/*
+            windows-x86_64:   sqlite-http-windows/*
   upload-deno:
     name: Upload Deno release assets
     needs:
