@@ -1,6 +1,6 @@
 {
   "name": "sqlite-http",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "github": "https://github.com/asg017/sqlite-http",
   "tasks": {
     "test": "deno test --unstable -A test.ts"
