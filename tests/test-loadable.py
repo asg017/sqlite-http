@@ -174,6 +174,16 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(d["meta"], None)
   
   @skip_do
+  def test_http_get_multiple_response_body(self):
+    d = db.execute("select response_body as r1, response_body as r2 from http_get('http://localhost:8080/base64/YWxleA==')").fetchone()
+    self.assertEqual(d["r1"], b"alex")
+    self.assertEqual(d["r2"], b"alex")
+
+    d = db.execute("select response_body from json_each('[\"YWxleA==\", \"YW5nZWw=\"]') join http_get('http://localhost:8080/base64/' || value)").fetchall()
+    self.assertEqual(d[0]["response_body"], b"alex")
+    self.assertEqual(d[1]["response_body"], b"angel")
+  
+  @skip_do
   def test_http_get_body(self):
     d, = db.execute("""
       select http_get_body(

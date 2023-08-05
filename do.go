@@ -466,6 +466,8 @@ type HttpDoCursor struct {
 	// Remote network address, filled in when HTTP connection is made, IP address
 	RemoteAddr string
 
+	response_body []byte
+
 	columns []vtab.Column
 }
 
@@ -531,18 +533,24 @@ func (cur *HttpDoCursor) Column(ctx vtab.Context, c int) error {
 			ctx.ResultText(string(buf))
 		}
 	case "response_body":
-		start := time.Now()
-		cur.timing.BodyStart = &start
+		if cur.response_body == nil {
+			start := time.Now()
+			cur.timing.BodyStart = &start
 
-		body, err := ioutil.ReadAll(cur.response.Body)
-		end := time.Now()
-		cur.timing.BodyEnd = &end
+			body, err := ioutil.ReadAll(cur.response.Body)
+			end := time.Now()
+			cur.timing.BodyEnd = &end
 
-		if err != nil {
-			ctx.ResultError(err)
+			if err != nil {
+				ctx.ResultError(err)
+			} else {
+				ctx.ResultBlob(body)
+				cur.response_body = body
+			}
 		} else {
-			ctx.ResultBlob(body)
+			ctx.ResultBlob(cur.response_body)
 		}
+
 	case "remote_address":
 		ctx.ResultText(cur.RemoteAddr)
 	case "timings":
