@@ -88,6 +88,17 @@ datasette: $(TARGET_WHEELS) $(shell find python/datasette_sqlite_http -type f -n
 	rm $(TARGET_WHEELS)/datasette* || true
 	pip3 wheel python/datasette_sqlite_http/ --no-deps -w $(TARGET_WHEELS)
 
+bindings/sqlite-utils/pyproject.toml: bindings/sqlite-utils/pyproject.toml.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+	echo "✅ generated $@"
+
+bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py: bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py.tmpl VERSION
+	VERSION=$(VERSION) envsubst < $< > $@
+	echo "✅ generated $@"
+
+sqlite-utils: $(TARGET_WHEELS) bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py
+	python3 -m build bindings/sqlite-utils -w -o $(TARGET_WHEELS)
+
 npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.json.tmpl npm/sqlite-http/package.json.tmpl scripts/npm_generate_platform_packages.sh
 	scripts/npm_generate_platform_packages.sh
 
@@ -102,6 +113,7 @@ ruby: bindings/ruby/lib/version.rb
 version:
 	make python
 	make python-versions
+	make bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py
 	make npm
 	make deno
 	make ruby
@@ -148,6 +160,6 @@ publish-release:
 	./scripts/publish_release.sh
 
 .PHONY: all format clean publish-release \
-	python python-versions datasette npm deno ruby version \
+	python python-versions datasette sqlite-utils npm deno ruby version \
 	test test-loadable test-watch httpbin \
 	loadable

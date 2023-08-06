@@ -1,0 +1,21 @@
+[project]
+name = "sqlite-utils-sqlite-http"
+version = "0.1.0"
+description = "TODO"
+readme = "README.md"
+authors = [{name = "Alex Garcia"}]
+license = {text = "Apache-2.0"}
+classifiers = []
+
+dependencies = [
+    "sqlite-utils",
+    "sqlite-http"
+]
+
+[project.urls]
+Homepage = "https://github.com/asg017/sqlite-http"
+Changelog = "https://github.com/asg017/sqlite-http/releases"
+Issues = "https://github.com/asg017/sqlite-http/issues"
+
+[project.entry-points.sqlite_utils]
+sqlite_http = "sqlite_utils_sqlite_http"
