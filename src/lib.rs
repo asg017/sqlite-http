@@ -1,3 +1,4 @@
+use reqwest::blocking::Response;
 use sqlite_loadable::prelude::*;
 use sqlite_loadable::{api, define_scalar_function, Result};
 
@@ -19,14 +20,34 @@ Source: {}
     )?;
     Ok(())
 }
+
+fn has_text_content_type(response:&Response)->bool {
+  let mimetype = match response.headers().get("content-type") {
+    Some(m) => m.as_bytes(), 
+    None => return false
+  };
+  mimetype.starts_with(b"text/") || mimetype.starts_with(b"application/json")
+}
+
+fn result_response(context: *mut sqlite3_context, response: Response)->Result<()> {
+  if has_text_content_type(&response) {
+    api::result_text(context, response.text().unwrap())?;
+  }else {
+    api::result_blob(context, response.bytes().unwrap().as_ref());
+  }
+  Ok(())
+}
 pub fn http_get_body(context: *mut sqlite3_context, values: &[*mut sqlite3_value]) -> Result<()> {
-    let url = api::value_text(values.get(0).unwrap()).unwrap();
+    let url = api::value_text(&values[0]).unwrap();
     let _headers = values.get(1).map(|v| api::value_text(v).unwrap());
     let _cookies = "";
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::ClientBuilder::new().user_agent(concat!(
+      env!("CARGO_PKG_NAME"),
+      "/",
+      env!("CARGO_PKG_VERSION"),
+  )).build().unwrap();
     let request = client.get(url);
-    let response = request.send().unwrap();
-    api::result_blob(context, response.bytes().unwrap().as_ref());
+    result_response(context, request.send().unwrap())?;
     Ok(())
 }
 use sqlite_reader::{SqliteReader, READER_POINTER_NAME};
@@ -75,7 +96,7 @@ pub fn sqlite3_http_init(db: *mut sqlite3) -> Result<()> {
         FunctionFlags::UTF8 | FunctionFlags::DETERMINISTIC,
     )?;
 
-    define_scalar_function(db, "http_get_body", 0, http_get_body, FunctionFlags::UTF8)?;
+    define_scalar_function(db, "http_get_body", 1, http_get_body, FunctionFlags::UTF8)?;
 
     define_scalar_function(db, "http_request", 1, http_request, FunctionFlags::UTF8)?;
     Ok(())

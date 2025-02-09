@@ -1,3 +1,3 @@
 .load target/debug/libsqlite_http sqlite3_http_init
 
-select http_get_body();
+select http_get_body('https://api.github.com/rate_limit');
