@@ -83,6 +83,9 @@ jobs:
     needs: dist
     environment:
       name: release
+    env:
+      # npm only reports *why* the OIDC token exchange failed at verbose level
+      NPM_CONFIG_LOGLEVEL: verbose
     permissions:
       contents: read
       id-token: write
