@@ -466,6 +466,9 @@ type HttpDoCursor struct {
 	// Remote network address, filled in when HTTP connection is made, IP address
 	RemoteAddr string
 
+	// Body sent with the original request. Kept separately because
+	// request.Body is drained once the request is sent.
+	request_body  []byte
 	response_body []byte
 
 	columns []vtab.Column
@@ -507,12 +510,7 @@ func (cur *HttpDoCursor) Column(ctx vtab.Context, c int) error {
 			ctx.ResultText(string(buf))
 		}
 	case "request_body":
-		body, err := ioutil.ReadAll(cur.request.Body)
-		if err != nil {
-			ctx.ResultError(err)
-		}
-
-		ctx.ResultBlob(body)
+		ctx.ResultBlob(cur.request_body)
 	case "response_status":
 		ctx.ResultText(cur.response.Status)
 	case "response_status_code":
@@ -642,7 +640,8 @@ func PostTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) 
 	}
 
 	cursor := HttpDoCursor{
-		columns: PostTableColumns,
+		columns:      PostTableColumns,
+		request_body: body,
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: "POST", url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {
@@ -695,7 +694,8 @@ func DoTableIterator(constraints []*vtab.Constraint, order []*sqlite.OrderBy) (v
 	}
 
 	cursor := HttpDoCursor{
-		columns: DoTableColumns,
+		columns:      DoTableColumns,
+		request_body: body,
 	}
 	client, request, err := prepareRequest(&PrepareRequestParams{method: method, url: url, headers: headers, body: body, cookies: cookies})
 	if err != nil {

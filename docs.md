@@ -170,7 +170,7 @@ The `request_headers` column contain the HTTP headers sent with the initial requ
 
 The `request_cookies` column is a work-in-progress. Will eventually be a JSON array of cookies sent with the request.
 
-The `request_body` column contains the raw HTTP body sent along with the request, or NULL or none was sent.
+The `request_body` column contains the raw HTTP body sent along with the request, or an empty blob if none was sent.
 
 The `response_status` column contains the HTTP status received by the response, like `"200 OK"`.
 

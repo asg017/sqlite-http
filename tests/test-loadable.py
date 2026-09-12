@@ -295,6 +295,37 @@ class TestHttp(unittest.TestCase):
     data = json.loads(d.decode("utf8"))
     self.assertEqual(data.get("json").get("name"), "Alex")
   
+  @skip_do
+  def test_http_post(self):
+    # https://github.com/asg017/sqlite-http/issues/35
+    d = db.execute("""
+      select * from http_post(
+        'http://localhost:8080/post',
+        http_headers('Content-Type', 'text/plain'),
+        'TEST BODY'
+      )
+    """).fetchone()
+    self.assertEqual(d["request_method"], "POST")
+    self.assertEqual(d["request_body"], b"TEST BODY")
+    self.assertEqual(d["response_status_code"], 200)
+    self.assertEqual(json.loads(d["response_body"].decode("utf8")).get("data"), "TEST BODY")
+
+  @skip_do
+  def test_http_post_request_body_blob(self):
+    d, = db.execute("""
+      select request_body from http_post('http://localhost:8080/post', null, X'00ff01')
+    """).fetchone()
+    self.assertEqual(d, b"\x00\xff\x01")
+
+  @skip_do
+  def test_http_do(self):
+    d = db.execute("""
+      select * from http_do('PUT', 'http://localhost:8080/put', null, 'DO BODY')
+    """).fetchone()
+    self.assertEqual(d["request_method"], "PUT")
+    self.assertEqual(d["request_body"], b"DO BODY")
+    self.assertEqual(json.loads(d["response_body"].decode("utf8")).get("data"), "DO BODY")
+
   # TODO test without needing to post_body
   @skip_do
   def test_http_post_form_urlencoded(self):
