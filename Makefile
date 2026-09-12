@@ -1,12 +1,10 @@
 COMMIT=$(shell git rev-parse HEAD)
-VERSION=$(shell git describe --tags --exact-match --always)
 VERSION=$(shell cat VERSION)
 DATE=$(shell date +'%FT%TZ%z')
 
 VENDOR_SQLITE=$(shell pwd)/sqlite
 GO_BUILD_LDFLAGS=-ldflags '-X main.Version=v$(VERSION) -X main.Commit=$(COMMIT) -X main.Date=$(DATE)'
 GO_BUILD_CGO_CFLAGS=CGO_ENABLED=1 CGO_CFLAGS="-DUSE_LIBSQLITE3" CPATH="$(VENDOR_SQLITE)"
-
 
 ifeq ($(shell uname -s),Darwin)
 CONFIG_DARWIN=y
@@ -16,21 +14,15 @@ else
 CONFIG_LINUX=y
 endif
 
-# framework stuff is needed bc https://github.com/golang/go/issues/42459#issuecomment-896089738
 ifdef CONFIG_DARWIN
 LOADABLE_EXTENSION=dylib
-SQLITE3_CFLAGS=-framework CoreFoundation -framework Security
 endif
-
 ifdef CONFIG_LINUX
 LOADABLE_EXTENSION=so
 endif
-
-
 ifdef CONFIG_WINDOWS
 LOADABLE_EXTENSION=dll
 endif
-
 
 ifdef python
 PYTHON=$(python)
@@ -38,128 +30,57 @@ else
 PYTHON=python3
 endif
 
-ifdef IS_MACOS_ARM
-RENAME_WHEELS_ARGS=--is-macos-arm
-else
-RENAME_WHEELS_ARGS=
-endif
-
 prefix=dist
 
 TARGET_LOADABLE=$(prefix)/http0.$(LOADABLE_EXTENSION)
-TARGET_WHEELS=$(prefix)/wheels
-TARGET_OBJ=$(prefix)/http0.o
-TARGET_SQLITE3=$(prefix)/sqlite3
+TARGET_STATIC=$(prefix)/http0.a
 
-INTERMEDIATE_PYPACKAGE_EXTENSION=python/sqlite_http/sqlite_http/http0.$(LOADABLE_EXTENSION)
+GO_FILES=./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
 
 loadable: $(TARGET_LOADABLE)
+static: $(TARGET_STATIC)
 all: loadable
-
-GO_FILES= ./cookies.go ./settings.go ./do.go ./shared.go ./meta.go ./headers.go
 
 $(prefix):
 	mkdir -p $(prefix)
 
-$(TARGET_WHEELS): $(prefix)
-	mkdir -p $(TARGET_WHEELS)
-
-$(TARGET_LOADABLE):  $(GO_FILES)
+$(TARGET_LOADABLE): $(GO_FILES) | $(prefix)
 	$(GO_BUILD_CGO_CFLAGS) go build \
 	-buildmode=c-shared -o $@ -tags="shared" \
 	$(GO_BUILD_LDFLAGS) \
 	.
 
-python: $(TARGET_WHEELS) $(TARGET_LOADABLE) $(TARGET_WHEELS) scripts/rename-wheels.py $(shell find python/sqlite_http -type f -name '*.py')
-	cp $(TARGET_LOADABLE) $(INTERMEDIATE_PYPACKAGE_EXTENSION)
-	rm $(TARGET_WHEELS)/sqlite_http* || true
-	pip3 wheel python/sqlite_http/ -w $(TARGET_WHEELS)
-	python3 scripts/rename-wheels.py $(TARGET_WHEELS) $(RENAME_WHEELS_ARGS)
-	echo "✅ generated python wheel"
-
-python-versions: python/version.py.tmpl
-	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/sqlite_http/sqlite_http/version.py
-	echo "✅ generated python/sqlite_http/sqlite_http/version.py"
-
-	VERSION=$(VERSION) envsubst < python/version.py.tmpl > python/datasette_sqlite_http/datasette_sqlite_http/version.py
-	echo "✅ generated python/datasette_sqlite_http/datasette_sqlite_http/version.py"
-
-datasette: $(TARGET_WHEELS) $(shell find python/datasette_sqlite_http -type f -name '*.py')
-	rm $(TARGET_WHEELS)/datasette* || true
-	pip3 wheel python/datasette_sqlite_http/ --no-deps -w $(TARGET_WHEELS)
-
-bindings/sqlite-utils/pyproject.toml: bindings/sqlite-utils/pyproject.toml.tmpl VERSION
-	VERSION=$(VERSION) envsubst < $< > $@
-	echo "✅ generated $@"
-
-bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py: bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py.tmpl VERSION
-	VERSION=$(VERSION) envsubst < $< > $@
-	echo "✅ generated $@"
-
-sqlite-utils: $(TARGET_WHEELS) bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py
-	python3 -m build bindings/sqlite-utils -w -o $(TARGET_WHEELS)
-
-npm: VERSION npm/platform-package.README.md.tmpl npm/platform-package.package.json.tmpl npm/sqlite-http/package.json.tmpl scripts/npm_generate_platform_packages.sh
-	scripts/npm_generate_platform_packages.sh
-
-deno: VERSION deno/deno.json.tmpl
-	scripts/deno_generate_package.sh
-
-bindings/ruby/lib/version.rb: bindings/ruby/lib/version.rb.tmpl VERSION
-	VERSION=$(VERSION) envsubst < $< > $@
-
-ruby: bindings/ruby/lib/version.rb
-
-version:
-	make python
-	make python-versions
-	make bindings/sqlite-utils/pyproject.toml bindings/sqlite-utils/sqlite_utils_sqlite_http/version.py
-	make npm
-	make deno
-	make ruby
-
-$(TARGET_OBJ):  $(GO_FILES)
-	$(GO_BUILD_CGO_CFLAGS) CGO_ENABLED=1 go build -buildmode=c-archive \
+$(TARGET_STATIC): $(GO_FILES) | $(prefix)
+	$(GO_BUILD_CGO_CFLAGS) go build \
+	-buildmode=c-archive -o $@ \
 	$(GO_BUILD_LDFLAGS) \
-	-o $@ .
-
-dist/sqlite3-extra.c: sqlite/sqlite3.c sqlite/core_init.c
-	cat sqlite/sqlite3.c sqlite/core_init.c > $@
+	.
 
 format:
 	gofmt -s -w .
 
-httpbin:
-	docker run -p 8080:80 kennethreitz/httpbin
-
 clean:
-	rm dist/*
+	rm -rf $(prefix)
+
+# Local httpbin for the test suite, the same server CI uses. No docker needed.
+httpbin:
+	go run github.com/mccutchen/go-httpbin/v2/cmd/go-httpbin@v2.25.0 -port 8080
 
 test-loadable:
 	$(PYTHON) tests/test-loadable.py
 
-test-python:
-	$(PYTHON) tests/test-python.py
-
-test-npm:
-	node npm/sqlite-http/test.js
-
-test-deno:
-	deno task --config deno/deno.json test
-
 test-watch:
 	watchexec --clear -w tests/test-loadable.py make test-loadable
 
-test:
-	make test-loadable
-	make test-python
-	make test-npm
-	make test-deno
+test: test-loadable
+
+# Build every distributable (npm, pip, gem, ...) from the extensions in
+# dist/<target>/. CI populates those directories from the build matrix.
+sqlite-dist: sqlite-dist.toml
+	sqlite-dist build --set-version $(VERSION)
 
 publish-release:
 	./scripts/publish_release.sh
 
-.PHONY: all format clean publish-release \
-	python python-versions datasette sqlite-utils npm deno ruby version \
-	test test-loadable test-watch httpbin \
-	loadable
+.PHONY: all loadable static format clean httpbin \
+	test test-loadable test-watch sqlite-dist publish-release

@@ -87,7 +87,6 @@ See [`docs.md`](./docs.md) for a full API reference.
 | Python         | `pip install sqlite-http`                                    | [![PyPI](https://img.shields.io/pypi/v/sqlite-http.svg?color=blue&logo=python&logoColor=white)](https://pypi.org/project/sqlite-http/)                                                      |
 | Datasette      | `datasette install datasette-sqlite-http`                    | [![Datasette](https://img.shields.io/pypi/v/datasette-sqlite-http.svg?color=B6B6D9&label=Datasette+plugin&logoColor=white&logo=python)](https://datasette.io/plugins/datasette-sqlite-http) |
 | Node.js        | `npm install sqlite-http`                                    | [![npm](https://img.shields.io/npm/v/sqlite-http.svg?color=green&logo=nodedotjs&logoColor=white)](https://www.npmjs.com/package/sqlite-http)                                                |
-| Deno           | [`deno.land/x/sqlite_http`](https://deno.land/x/sqlite_http) | [![deno.land/x release](https://img.shields.io/github/v/release/asg017/sqlite-http?color=fef8d2&include_prereleases&label=deno.land%2Fx&logo=deno)](https://deno.land/x/sqlite_http)        |
 | Ruby           | `gem install sqlite-http`                                    | ![Gem](https://img.shields.io/gem/v/sqlite-http?color=red&logo=rubygems&logoColor=white)                                                                                                    |
 | Github Release |                                                              | ![GitHub tag (latest SemVer pre-release)](https://img.shields.io/github/v/tag/asg017/sqlite-http?color=lightgrey&include_prereleases&label=Github+release&logo=github)                      |
 
@@ -97,7 +96,7 @@ See [`docs.md`](./docs.md) for a full API reference.
 | Rust           | `cargo add sqlite-http`                                             | [![Crates.io](https://img.shields.io/crates/v/sqlite-http?logo=rust)](https://crates.io/crates/sqlite-http)                                                                                 |
 -->
 
-The [Releases page](https://github.com/asg017/sqlite-http/releases) contains pre-built binaries for Linux amd64, MacOS amd64 (no arm), and Windows.
+The [Releases page](https://github.com/asg017/sqlite-http/releases) contains pre-built binaries for Linux (x86_64 and aarch64), MacOS (x86_64 and aarch64), and Windows (x86_64).
 
 ### As a loadable extension
 

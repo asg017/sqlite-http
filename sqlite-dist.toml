@@ -1,0 +1,21 @@
+[package]
+name = "sqlite-http"
+license = "MIT OR Apache"
+homepage = "https://github.com/asg017/sqlite-http"
+repo = "https://github.com/asg017/sqlite-http"
+description = "A SQLite extension for making HTTP requests purely in SQL"
+authors = ["Alex Garcia"]
+git_tag_format = "v$VERSION"
+
+[targets]
+github_releases = {}
+sqlpkg = {}
+spm = {}
+
+pip = {}
+datasette = {}
+sqlite_utils = {}
+
+npm = {}
+
+gem = { module_name = "SqliteHttp" }

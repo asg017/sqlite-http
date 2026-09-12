@@ -11,6 +11,10 @@ should_skip_net = os.environ.get("SKIP_NET") == "1"
 if should_skip_net:
   print("WARNING: Skipping all tests that depend on a local httpbin running. should only be used for CI tests only.")
 
+def first(v):
+  # go-httpbin returns query/form values as lists, kennethreitz/httpbin as scalars
+  return v[0] if isinstance(v, list) else v
+
 def skip_do(f):
   def wrapper(self):
     if should_skip_net:
@@ -144,7 +148,8 @@ class TestHttp(unittest.TestCase):
         'http://localhost:8080/delete'
       )
     """).fetchone()
-    self.assertEqual(len(headers.splitlines()), 7)
+    self.assertIn("Content-Type:", headers)
+    self.assertIn("Date:", headers)
   
   # TODO finish this test, then add http_post and http_do
   @skip_do
@@ -167,7 +172,7 @@ class TestHttp(unittest.TestCase):
     self.assertEqual(d["request_body"].decode("utf8"), "")
     self.assertEqual(d["response_status"], "200 OK")
     self.assertEqual(d["response_status_code"], 200)
-    self.assertEqual(len(d["response_headers"].splitlines()), 7)
+    self.assertIn("Content-Type:", d["response_headers"])
     self.assertEqual(d["response_cookies"], "[]")
     self.assertTrue(len(d["response_body"]) > 100)
     self.assertTrue(d["remote_address"] in ("127.0.0.1:8080", "[::1]:8080"))
@@ -191,7 +196,7 @@ class TestHttp(unittest.TestCase):
       )
     """).fetchone()
     data = json.loads(d.decode("utf8"))
-    self.assertEqual(data.get("args").get("name"), "alex")
+    self.assertEqual(first(data.get("args").get("name")), "alex")
   
   @skip_do
   def test_http_get_headers(self):
@@ -200,7 +205,8 @@ class TestHttp(unittest.TestCase):
         'http://localhost:8080/get'
       )
     """).fetchone()
-    self.assertEqual(len(headers.splitlines()), 7)
+    self.assertIn("Content-Type:", headers)
+    self.assertIn("Date:", headers)
   
   def test_http_headers(self):
     h1, h2 = db.execute("""
@@ -302,15 +308,16 @@ class TestHttp(unittest.TestCase):
       )
     """).fetchone()
     data = json.loads(d.decode("utf8"))
-    self.assertEqual(data.get("form").get("name"), "Alex")
-    self.assertEqual(data.get("form").get("age"), "99")
+    self.assertEqual(first(data.get("form").get("name")), "Alex")
+    self.assertEqual(first(data.get("form").get("age")), "99")
   
   @skip_do
   def test_http_post_headers(self):
     headers, = db.execute("""
       select http_post_headers("http://localhost:8080/post")
     """).fetchone()
-    self.assertEqual(len(headers.splitlines()), 7)
+    self.assertIn("Content-Type:", headers)
+    self.assertIn("Date:", headers)
   
   # return only i, timings for testing rate_limit
   def _run_do_n(self, n=10):
