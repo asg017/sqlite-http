@@ -72,9 +72,17 @@ jobs:
             .sqlite-dist/install.sh
         env:
           GH_TOKEN: ${{ github.token }}
+  # npm trusted publishing: no stored token. npm verifies the GitHub OIDC
+  # token against the trusted publisher configured on each package
+  # (repo asg017/sqlite-http, workflow release.yaml, environment release).
   publish-npm:
     runs-on: ubuntu-latest
     needs: dist
+    environment:
+      name: release
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -100,8 +108,6 @@ jobs:
           npm publish --access public --tag $TAG .sqlite-dist/npm/sqlite-http-linux-arm64.tar.gz
           npm publish --access public --tag $TAG .sqlite-dist/npm/sqlite-http-windows-x64.tar.gz
           npm publish --access public --tag $TAG .sqlite-dist/npm/sqlite-http.tar.gz
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
   publish-gem:
     runs-on: ubuntu-latest
     needs: dist
