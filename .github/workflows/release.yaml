@@ -92,10 +92,13 @@ jobs:
         with:
           name: sqlite-dist-output
           path: .sqlite-dist/
-      - uses: actions/setup-node@v4
+      # setup-node v4 exported a dummy NODE_AUTH_TOKEN that broke OIDC auth;
+      # v7 only exports it when explicitly set.
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
       # `npm stage` needs npm >= 11.15.0
       - run: npm install -g npm@latest
       - run: |
@@ -108,7 +111,7 @@ jobs:
             TAG=latest
           fi
           for file in .sqlite-dist/npm/*.tar.gz; do
-            npm stage publish --access public --tag $TAG "$file"
+            npm stage publish --access public --tag $TAG --provenance "$file"
           done
   publish-gem:
     runs-on: ubuntu-latest
