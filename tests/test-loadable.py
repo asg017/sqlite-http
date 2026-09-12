@@ -320,7 +320,7 @@ class TestHttp(unittest.TestCase):
   @skip_do
   def test_http_do(self):
     d = db.execute("""
-      select * from http_do('PUT', 'http://localhost:8080/put', null, 'DO BODY')
+      select * from http_do('PUT', 'http://localhost:8080/put', http_headers('Content-Type', 'text/plain'), 'DO BODY')
     """).fetchone()
     self.assertEqual(d["request_method"], "PUT")
     self.assertEqual(d["request_body"], b"DO BODY")
