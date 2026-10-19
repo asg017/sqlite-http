@@ -184,7 +184,7 @@ The `response_body` column contains the response body as a BLOB.
 
 The `remote_address` column is the IP address that the HTTP request connected to.
 
-The `timings` column contains timestamps of when specific events happened while making the request. It is a JSON object, where the keys are the name of the event that happened, and the values are the string timestamps of when it occured (in ISO-8601, same format as sqlite's [date functions](https://www.sqlite.org/lang_datefunc.html)). Most of these are obtained using Go's [httptrace](https://pkg.go.dev/net/http/httptrace), so refer to that for more information. The events are:
+The `timings` column contains timestamps of when specific events happened while making the request. It is a JSON object, where the keys are the name of the event that happened, and the values are the string timestamps of when it occurred (in ISO-8601, same format as sqlite's [date functions](https://www.sqlite.org/lang_datefunc.html)). Most of these are obtained using Go's [httptrace](https://pkg.go.dev/net/http/httptrace), so refer to that for more information. The events are:
 
 - `"start"` - _When the request is first made_
 - `"dns_start"` - _"when a DNS lookup begins"_
